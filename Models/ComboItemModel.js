@@ -28,6 +28,10 @@ const comboSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
+        qty: {
+          type: Number,
+          required: true,
+        },
       },
     ],
     price: {
@@ -38,10 +42,7 @@ const comboSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    qty: {
-      type: Number,
-      required: true,
-    },
+
     image: {
       type: String,
     },

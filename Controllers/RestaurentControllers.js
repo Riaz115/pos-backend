@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const Restaurant = require("../Models/RestaurentModel");
 const Counter = require("../Models/CounterModel");
+const Guests = require("../Models/RestGuestsModel");
 
 //this is for images url
 const imageUrl = "http://localhost:8000/restImages/";
@@ -319,6 +320,108 @@ const getDataForEditCounter = async (req, res) => {
   }
 };
 
+//this is for add restaurent guests
+const addRestGuest = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const { name, email, phone, age, gender, address } = req.body;
+    const myRestaurent = await Restaurant.findById(id);
+
+    //this is for checking if email already exists
+    const isEmailExists = await Guests.findOne({ email });
+    if (isEmailExists) {
+      res.status(400).json({ msg: "Email Already exists" });
+    } else {
+      let restaurent = {
+        name: myRestaurent.restName,
+        email: myRestaurent.restEmail,
+        id: myRestaurent._id,
+      };
+
+      const newGuest = new Guests({
+        restaurent: restaurent,
+        name,
+        email,
+        phone,
+        age,
+        address,
+        gender,
+      });
+
+      const savedGuest = await newGuest.save();
+
+      myRestaurent.guests.push({
+        id: savedGuest._id,
+        name: savedGuest.name,
+      });
+
+      await myRestaurent.save();
+      res
+        .status(201)
+        .json({ msg: "Guest Added Successfully", counter: savedGuest });
+    }
+  } catch (err) {
+    console.log("there is error in add counter function", err);
+    res.status(500).json({ msg: "server error ", err });
+  }
+};
+
+//this is for getting all guest of the restaurent
+const forGetAllGuest = async (req, res) => {
+  const id = req.params.id.trim();
+  const guests = await Guests.find({
+    "restaurent.id": id,
+  });
+
+  res.status(200).json({ guests });
+};
+
+//this is for get data of guest for edit
+const forGetDataGuestForEdit = async (req, res) => {
+  const id = req.params.id.trim();
+  const guestPrevData = await Guests.findById(id);
+  try {
+    res.status(200).json({ guestPrevData });
+  } catch (err) {
+    res.status(500).json({ msg: "server error ", err });
+  }
+};
+
+//this is for edit the guest of restaurent
+const forEditGuest = async (req, res) => {
+  const id = req.params.id;
+  const { name, email, age, phone, address, gender } = req.body;
+
+  try {
+    const guestData = {
+      name,
+      email,
+      phone,
+      age,
+      gender,
+      address,
+    };
+    const newGuest = await Guests.findByIdAndUpdate(id, guestData);
+    res.status(200).json({ msg: "counter updated succesfully", newGuest });
+  } catch (err) {
+    console.log("there is error in the update user function", err);
+    res.status(500).json({ msg: "server 0error ", err });
+  }
+};
+
+//this is for delete the guest
+const forDeleteGuest = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const deleteItem = await Guests.findByIdAndDelete(id);
+
+    res.status(200).json({ msg: "deleted successfully", deleteItem });
+  } catch (err) {
+    console.log("there is error in the delete item function ", err);
+  }
+};
+
 //exporting
 module.exports = {
   forAddRestaurent,
@@ -330,4 +433,9 @@ module.exports = {
   getDataForEditCounter,
   forUpdateCounter,
   forEditGetCounterData,
+  addRestGuest,
+  forGetAllGuest,
+  forGetDataGuestForEdit,
+  forEditGuest,
+  forDeleteGuest,
 };

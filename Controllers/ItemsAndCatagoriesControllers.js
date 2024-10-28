@@ -113,7 +113,7 @@ const forAddCatagory = async (req, res) => {
 //this is for add menu item
 const forAddMenuItem = async (req, res) => {
   const id = req.params.id;
-  const { name, price, catagory, desc } = req.body;
+  const { name, price, catagory, desc, qty } = req.body;
   const itemImage = req.file ? req.file.filename : "";
 
   const myRestaurent = await Restaurant.findById(id);
@@ -130,6 +130,7 @@ const forAddMenuItem = async (req, res) => {
       price,
       catagory,
       desc,
+      qty,
       image: itemImage,
     });
 
@@ -171,12 +172,13 @@ const forUpdateCatagory = async (req, res) => {
 //this is for update the itme
 const forUpdateMenuItem = async (req, res) => {
   const id = req.params.id;
-  const { name, price, desc, catagory } = req.body;
+  const { name, price, desc, catagory, qty } = req.body;
   const updatedItem = {
     name,
     price,
     desc,
     catagory,
+    qty,
   };
   if (req.file) {
     updatedItem.image = req.file.filename;
@@ -253,7 +255,7 @@ const forDeleteMenuItem = async (req, res) => {
 const forCreateComboItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, items, price, desc, qty } = req.body;
+    const { name, items, price, desc } = req.body;
 
     const myRestaurent = await Restaurant.findById(id);
     let restaurent = {
@@ -263,12 +265,16 @@ const forCreateComboItem = async (req, res) => {
     };
 
     const itemImage = req.file ? req.file.filename : "";
-    const forItems = await menuItems.find({ _id: { $in: items } });
 
-    const comboItems = forItems.map((item) => ({
-      id: item._id,
-      name: item.name,
-    }));
+    const forItems = await menuItems.find({ _id: { $in: items } });
+    const comboItems = forItems.map((item) => {
+      const quantity = req.body.quantities[item._id];
+      return {
+        id: item._id,
+        name: item.name,
+        qty: quantity,
+      };
+    });
 
     // Create the combo deal
     const newCombo = new Combo({
@@ -277,7 +283,7 @@ const forCreateComboItem = async (req, res) => {
       items: comboItems,
       price,
       desc,
-      qty,
+
       image: itemImage,
     });
 
@@ -343,17 +349,20 @@ const forEditComboItem = async (req, res) => {
 
   const forItems = await menuItems.find({ _id: { $in: items } });
 
-  const comboItems = forItems.map((item) => ({
-    id: item._id,
-    name: item.name,
-  }));
+  const comboItems = forItems.map((item) => {
+    const quantity = req.body.quantities[item._id];
+    return {
+      id: item._id,
+      name: item.name,
+      qty: quantity,
+    };
+  });
 
   const updatedItem = {
     name,
     items: comboItems,
     price,
     desc,
-    qty,
   };
 
   if (req.file) {
@@ -379,11 +388,39 @@ const forEditComboItem = async (req, res) => {
 
   try {
     const newDeal = await Combo.findByIdAndUpdate(id, updatedItem);
-
     res.status(200).json({ msg: "user Updated Successfully", newDeal });
   } catch (err) {
     res.status(500).json({ msg: "Server Error" });
     console.log("there is error in update owner user function", err);
+  }
+};
+
+//this is for delete the combo item
+const forDeleteComboItem = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const myItem = await Combo.findById(id);
+    if (myItem.image) {
+      const imagePath = path.join(
+        __dirname,
+        "..",
+        "comboItemImages",
+        myItem.image
+      );
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.log("image not deleted", err);
+        } else {
+          console.log("image deleted sucessfully");
+        }
+      });
+    }
+
+    const deleteItem = await Combo.findByIdAndDelete(id);
+
+    res.status(200).json({ msg: "deleted successfully", deleteItem });
+  } catch (err) {
+    console.log("there is error in the delete item function ", err);
   }
 };
 
@@ -403,4 +440,5 @@ module.exports = {
   forGetAllComboItems,
   getDataForEditComboItem,
   forEditComboItem,
+  forDeleteComboItem,
 };

@@ -13,7 +13,7 @@ const port = process.env.PORT || 8000;
 
 //cors options
 const Options = {
-  origin: "http://localhost:3001",
+  origin: "http://localhost:3000",
   methods: "POST,GET,PUT ,DELETE,PATCH,HEAD,UPDATE",
   credentials: true,
 };

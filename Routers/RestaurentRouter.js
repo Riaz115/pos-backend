@@ -98,6 +98,11 @@ RestRouter.route("/getdataforedit/:id/comboitem").get(
   newController.getDataForEditComboItem
 );
 
+RestRouter.route("/forgetall/:id/guests").get(controllers.forGetAllGuest);
+RestRouter.route("/getforedit/:id/guest").get(
+  controllers.forGetDataGuestForEdit
+);
+
 //all post routes
 RestRouter.route("/addRestaurent").post(
   userAuth,
@@ -123,7 +128,7 @@ RestRouter.route("/foradd/:id/combo").post(
   newController.forCreateComboItem
 );
 
-RestRouter.route("").post();
+RestRouter.route("/foradd/:id/guest").post(controllers.addRestGuest);
 
 //all update routes
 RestRouter.route("/editRestaurent/:id").patch(
@@ -143,6 +148,7 @@ RestRouter.route("/editcomboitem/:id").patch(
   comboItemUpload.single("image"),
   newController.forEditComboItem
 );
+RestRouter.route("/editguest/:id").patch(controllers.forEditGuest);
 
 //all delete routes
 RestRouter.route("/delete/:id/catagory").delete(
@@ -152,6 +158,11 @@ RestRouter.route("/delete/:id/catagory").delete(
 RestRouter.route("/delete/:id/menuitem").delete(
   newController.forDeleteMenuItem
 );
+
+RestRouter.route("/delete/:id/comboitem").delete(
+  newController.forDeleteComboItem
+);
+RestRouter.route("/delete/:id/guest").delete(controllers.forDeleteGuest);
 
 //Exporting
 module.exports = RestRouter;

@@ -261,7 +261,7 @@ const forEditCounterArea = async (req, res) => {
     });
     res.status(200).json({ msg: "user updated sucessfully", updatedArea });
   } catch (err) {
-    console.log("there is error inthe edit counter area function", err);
+    console.log("there is error inthe edit counte area function", err);
     res.status(500).json({ msg: "Server Error", err });
   }
 };

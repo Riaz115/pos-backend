@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
-
-const MenuItemSchema = mongoose.Schema(
+const RestGuestSchema = mongoose.Schema(
   {
     restaurent: {
       id: {
@@ -11,29 +10,31 @@ const MenuItemSchema = mongoose.Schema(
       name: { type: String, required: true },
       email: { type: String, required: true },
     },
+
     name: {
       type: String,
       required: true,
     },
-    price: {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    phone: {
       type: Number,
       required: true,
     },
-    qty: {
+    age: {
       type: Number,
       required: true,
     },
-    catagory: {
+    address: {
       type: String,
       required: true,
     },
-    desc: {
+    gender: {
       type: String,
       required: true,
-    },
-
-    image: {
-      type: String,
     },
     date: {
       type: Date,
@@ -43,8 +44,8 @@ const MenuItemSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-//creating models
-const restMenuItems = mongoose.model("MenuItem", MenuItemSchema);
+//this is for modeling
+const Guests = mongoose.model("Guest", RestGuestSchema);
 
 //exporting
-module.exports = restMenuItems;
+module.exports = Guests;
