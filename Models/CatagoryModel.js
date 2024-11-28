@@ -8,10 +8,12 @@ const CatagorySchema = mongoose.Schema(
         ref: "Restaurant",
         required: true,
       },
-      name: { type: String, required: true },
-      email: { type: String, required: true },
     },
     name: {
+      type: String,
+      required: true,
+    },
+    maincatagory: {
       type: String,
       required: true,
     },
@@ -23,7 +25,6 @@ const CatagorySchema = mongoose.Schema(
     items: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
-        name: { type: String },
       },
     ],
   },

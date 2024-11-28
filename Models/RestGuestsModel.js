@@ -7,8 +7,6 @@ const RestGuestSchema = mongoose.Schema(
         ref: "Restaurant",
         required: true,
       },
-      name: { type: String, required: true },
-      email: { type: String, required: true },
     },
 
     name: {

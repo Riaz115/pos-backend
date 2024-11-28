@@ -8,7 +8,6 @@ const CounterAreaSchema = mongoose.Schema(
         ref: "Counter",
         required: true,
       },
-      name: { type: String, required: true },
     },
     areaName: {
       type: String,
@@ -18,7 +17,6 @@ const CounterAreaSchema = mongoose.Schema(
     tables: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Table" },
-        name: { type: String, required: true },
       },
     ],
   },

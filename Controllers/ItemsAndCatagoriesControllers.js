@@ -35,14 +35,14 @@ const forGetAllMenuItems = async (req, res) => {
     }
 
     // Update the image URL for each restaurant
-    const updatedrestMenuItems = restMenuItems.map((item) => {
+    const allItems = restMenuItems.map((item) => {
       if (item.image) {
         item.image = imageUrl + item.image;
       }
       return item;
     });
 
-    res.status(200).json({ updatedrestMenuItems });
+    res.status(200).json({ allItems });
   } catch (err) {
     res.status(500).json({ msg: "Server Error", err });
   }
@@ -80,12 +80,10 @@ const getDataForUpdateItem = async (req, res) => {
 //this is for adding counter
 const forAddCatagory = async (req, res) => {
   const id = req.params.id;
-  const { name } = req.body;
+  const { name, maincatagory } = req.body;
   const myRestaurent = await Restaurant.findById(id);
 
   let restaurent = {
-    name: myRestaurent.restName,
-    email: myRestaurent.restEmail,
     id: myRestaurent._id,
   };
 
@@ -93,6 +91,7 @@ const forAddCatagory = async (req, res) => {
     const newCatagory = new Catagories({
       restaurent: restaurent,
       name,
+      maincatagory,
     });
 
     const savedCatagory = await newCatagory.save();
@@ -118,8 +117,6 @@ const forAddMenuItem = async (req, res) => {
 
   const myRestaurent = await Restaurant.findById(id);
   let restaurent = {
-    name: myRestaurent.restName,
-    email: myRestaurent.restEmail,
     id: myRestaurent._id,
   };
 
@@ -131,6 +128,7 @@ const forAddMenuItem = async (req, res) => {
       catagory,
       desc,
       qty,
+
       image: itemImage,
     });
 
@@ -155,9 +153,10 @@ const forAddMenuItem = async (req, res) => {
 //this is for update catagory
 const forUpdateCatagory = async (req, res) => {
   const id = req.params.id;
-  const { name } = req.body;
+  const { name, maincatagory } = req.body;
   const catagoryData = {
     name: name,
+    maincatagory,
   };
 
   try {

@@ -7,7 +7,6 @@ const CounterUserSchema = mongoose.Schema(
         ref: "Counter",
         required: true,
       },
-      name: { type: String, required: true },
     },
     counterUserName: {
       type: String,

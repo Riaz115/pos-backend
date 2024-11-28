@@ -8,8 +8,6 @@ const MenuItemSchema = mongoose.Schema(
         ref: "Restaurant",
         required: true,
       },
-      name: { type: String, required: true },
-      email: { type: String, required: true },
     },
     name: {
       type: String,
@@ -23,6 +21,7 @@ const MenuItemSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+
     catagory: {
       type: String,
       required: true,

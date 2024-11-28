@@ -34,7 +34,6 @@ const forAddUserInCounter = async (req, res) => {
   //this is for counter data
   let counterData = {
     id: myCounter._id,
-    name: myCounter.counterName,
   };
 
   //this is for image
@@ -194,7 +193,6 @@ const forAddCounterArea = async (req, res) => {
   const forCounter = await Counter.findById(id);
   const counterData = {
     id: forCounter._id,
-    name: forCounter.counterName,
   };
 
   try {
@@ -266,6 +264,30 @@ const forEditCounterArea = async (req, res) => {
   }
 };
 
+//this is for delete the area of the counter
+const forDelteAreaOfTheCounter = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const DeletedArea = await counterAreas.findByIdAndDelete(id);
+    res
+      .status(200)
+      .json({ msg: "counter area delete successfully", DeletedArea });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for getting all counter areas
+const forGettingAllCounterAreas = async (req, res) => {
+  try {
+    const allAreas = await counterAreas.find();
+    res.status(200).json({ allAreas });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
 module.exports = {
   forAddUserInCounter,
   forGetCounterAllUser,
@@ -275,4 +297,6 @@ module.exports = {
   forGetAllCounterArea,
   forEditGetDataCounterArea,
   forEditCounterArea,
+  forDelteAreaOfTheCounter,
+  forGettingAllCounterAreas,
 };

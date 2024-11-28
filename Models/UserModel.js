@@ -52,8 +52,6 @@ const UserSchema = mongoose.Schema(
     restaurants: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Restaurant" },
-        name: { type: String },
-        email: { type: String },
       },
     ],
   },

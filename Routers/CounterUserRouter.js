@@ -35,6 +35,9 @@ CounterUserRouter.route("/getuserforedit/:userid").get(
 CounterUserRouter.route("/getforallcounterareas/:id").get(
   controllers.forGetAllCounterArea
 );
+CounterUserRouter.route("/forallcounterareas/get/all").get(
+  controllers.forGettingAllCounterAreas
+);
 
 CounterUserRouter.route("/getdataforeditcounterarea/:id").get(
   controllers.forEditGetDataCounterArea
@@ -59,6 +62,10 @@ CounterUserRouter.route("/foreditcounterarea/:id").patch(
   controllers.forEditCounterArea
 );
 //all delete routes
+
+CounterUserRouter.route("/delete/:id/counterarea").delete(
+  controllers.forDelteAreaOfTheCounter
+);
 
 //Exporting
 module.exports = CounterUserRouter;

@@ -8,8 +8,6 @@ const CounterSchema = mongoose.Schema(
         ref: "Restaurant",
         required: true,
       },
-      name: { type: String, required: true },
-      email: { type: String, required: true },
     },
     counterName: {
       type: String,
@@ -23,14 +21,11 @@ const CounterSchema = mongoose.Schema(
     users: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "CounterUser" },
-        name: { type: String },
-        email: { type: String },
       },
     ],
     counterArea: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "CounterArea" },
-        name: { type: String },
       },
     ],
   },

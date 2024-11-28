@@ -5,8 +5,6 @@ const restaurantSchema = new mongoose.Schema(
   {
     owner: {
       id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-      name: { type: String, required: true },
-      email: { type: String, required: true },
     },
     restName: { type: String, required: true },
     restEmail: { type: String, required: true },
@@ -32,8 +30,13 @@ const restaurantSchema = new mongoose.Schema(
     posTooltip: { type: String, required: true },
     menuTooltip: { type: String, required: true },
     payemtPreOrPost: { type: String, required: true },
-    serviceChargesType: { type: String, required: true },
-    deliveryChargesType: { type: String, required: true },
+    typeOfServiceCharges: { type: String, required: true },
+    serviceChargesAmount: { type: Number, required: true },
+    typeOfDeliveryCharges: { type: String, required: true },
+    deliveryChargesAmount: { type: Number, required: true },
+    gstTexType: { type: String, required: true },
+    gstTexAmount: { type: Number, required: true },
+
     date: {
       type: Date,
       default: Date.now(),
@@ -41,44 +44,37 @@ const restaurantSchema = new mongoose.Schema(
     Counters: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Counter" },
-        counterName: { type: String, required: true },
       },
     ],
     guests: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Guest" },
-        name: { type: String, required: true },
       },
     ],
     catagories: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Catagory" },
-        name: { type: String, required: true },
       },
     ],
     MenuItems: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
-        name: { type: String, required: true },
       },
     ],
 
     items: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Item" },
-        name: { type: String, required: true },
       },
     ],
     deals: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Combo" },
-        name: { type: String, required: true },
       },
     ],
     stockCatagories: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "StockCatagory" },
-        name: { type: String, required: true },
       },
     ],
   },

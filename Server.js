@@ -4,7 +4,7 @@ const app = express();
 const router = require("./Routers/MyRouters");
 const restRouter = require("./Routers/RestaurentRouter");
 const counterUser = require("./Routers/CounterUserRouter");
-const tableRouter = require("./Routers/TablesRouter");
+const tableRouter = require("./Routers/TableRouter");
 const DbConn = require("./DB/DBConn");
 const cors = require("cors");
 

@@ -33,8 +33,12 @@ const forAddRestaurent = async (req, res) => {
     posTooltip,
     menuTooltip,
     payemtPreOrPost,
-    serviceChargesType,
-    deliveryChargesType,
+    typeOfServiceCharges,
+    serviceChargesAmount,
+    typeOfDeliveryCharges,
+    deliveryChargesAmount,
+    gstTexType,
+    gstTexAmount,
   } = req.body;
 
   //this is for image
@@ -43,8 +47,6 @@ const forAddRestaurent = async (req, res) => {
   const { _id, name, email } = req.user;
   const OwnerData = {
     id: _id,
-    name: name,
-    email: email,
   };
 
   try {
@@ -74,8 +76,12 @@ const forAddRestaurent = async (req, res) => {
       posTooltip,
       menuTooltip,
       payemtPreOrPost,
-      serviceChargesType,
-      deliveryChargesType,
+      typeOfServiceCharges,
+      serviceChargesAmount,
+      typeOfDeliveryCharges,
+      deliveryChargesAmount,
+      gstTexType,
+      gstTexAmount,
     });
     const savedRestaurant = await newRestaurant.save();
 
@@ -121,7 +127,7 @@ const forGetUserAllRestaurents = async (req, res) => {
 
 //this is for getting data of single resturent for edit
 const forGetDataforEditRest = async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     const myRest = await Restaurant.findById(id);
@@ -134,7 +140,6 @@ const forGetDataforEditRest = async (req, res) => {
 
     res.status(200).json({ myRest, restLogo: restLogo });
   } catch (err) {
-    console.log("there is error in get restaurent data function ", err);
     res.status(500).json({ msg: "Server Error" });
   }
 };
@@ -167,8 +172,12 @@ const forEditResturent = async (req, res) => {
     posTooltip,
     menuTooltip,
     payemtPreOrPost,
-    serviceChargesType,
-    deliveryChargesType,
+    typeOfServiceCharges,
+    serviceChargesAmount,
+    typeOfDeliveryCharges,
+    deliveryChargesAmount,
+    gstTexType,
+    gstTexAmount,
   } = req.body;
 
   const updatedRest = {
@@ -195,13 +204,16 @@ const forEditResturent = async (req, res) => {
     posTooltip,
     menuTooltip,
     payemtPreOrPost,
-    serviceChargesType,
-    deliveryChargesType,
+    typeOfServiceCharges,
+    serviceChargesAmount,
+    typeOfDeliveryCharges,
+    deliveryChargesAmount,
+    gstTexType,
+    gstTexAmount,
   };
 
   if (req.file) {
     updatedRest.restLogo = req.file.filename;
-    console.log(updatedRest.restLogo, "check");
     const existingItem = await Restaurant.findById(id);
 
     const existImage = path.join(
@@ -236,8 +248,6 @@ const forAddCounter = async (req, res) => {
   const myRestaurent = await Restaurant.findById(id);
 
   let restaurent = {
-    name: myRestaurent.restName,
-    email: myRestaurent.restEmail,
     id: myRestaurent._id,
   };
 
@@ -334,8 +344,6 @@ const addRestGuest = async (req, res) => {
       res.status(400).json({ msg: "Email Already exists" });
     } else {
       let restaurent = {
-        name: myRestaurent.restName,
-        email: myRestaurent.restEmail,
         id: myRestaurent._id,
       };
 
@@ -370,18 +378,24 @@ const addRestGuest = async (req, res) => {
 //this is for getting all guest of the restaurent
 const forGetAllGuest = async (req, res) => {
   const id = req.params.id.trim();
-  const guests = await Guests.find({
-    "restaurent.id": id,
-  });
 
-  res.status(200).json({ guests });
+  try {
+    const guests = await Guests.find({
+      "restaurent.id": id,
+    });
+
+    res.status(200).json({ guests });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
 };
 
 //this is for get data of guest for edit
 const forGetDataGuestForEdit = async (req, res) => {
   const id = req.params.id.trim();
-  const guestPrevData = await Guests.findById(id);
+
   try {
+    const guestPrevData = await Guests.findById(id);
     res.status(200).json({ guestPrevData });
   } catch (err) {
     res.status(500).json({ msg: "server error ", err });
@@ -422,6 +436,32 @@ const forDeleteGuest = async (req, res) => {
   }
 };
 
+//this is for delete restaurent
+const forDeleteRestaurent = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleteItem = await Restaurant.findByIdAndDelete(id);
+    res
+      .status(200)
+      .json({ msg: " restaurent deleted successfully", deleteItem });
+  } catch (err) {
+    console.log("err", err);
+    console.log("there is error in the delete rest function ", err);
+  }
+};
+
+//this is for delete counter
+const forDeleteCounter = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleteItem = await Counter.findByIdAndDelete(id);
+    res.status(200).json({ msg: " counter deleted successfully", deleteItem });
+  } catch (err) {
+    console.log("err", err);
+    console.log("there is error in the delete rest function ", err);
+  }
+};
+
 //exporting
 module.exports = {
   forAddRestaurent,
@@ -438,4 +478,6 @@ module.exports = {
   forGetDataGuestForEdit,
   forEditGuest,
   forDeleteGuest,
+  forDeleteRestaurent,
+  forDeleteCounter,
 };

@@ -7,6 +7,7 @@ const path = require("path");
 const userAuth = require("../MiddleWares/UserAuth");
 const controllers = require("../Controllers/RestaurentControllers");
 const newController = require("../Controllers/ItemsAndCatagoriesControllers");
+const logMiddleware = require("../MiddleWares/LogData");
 
 //for restaurent logo
 const storage = multer.diskStorage({
@@ -137,7 +138,11 @@ RestRouter.route("/editRestaurent/:id").patch(
 );
 
 RestRouter.route("/update/:id/counter").patch(controllers.forUpdateCounter);
-RestRouter.route("/update/:id/catagory").patch(newController.forUpdateCatagory);
+RestRouter.route("/update/:id/catagory").patch(
+  userAuth,
+  logMiddleware,
+  newController.forUpdateCatagory
+);
 
 RestRouter.route("/editmenuitem/:id").patch(
   menuItemUpload.single("image"),
@@ -163,6 +168,10 @@ RestRouter.route("/delete/:id/comboitem").delete(
   newController.forDeleteComboItem
 );
 RestRouter.route("/delete/:id/guest").delete(controllers.forDeleteGuest);
+RestRouter.route("/delete/:id/counter").delete(controllers.forDeleteCounter);
+RestRouter.route("/delete/:id/restaurent").delete(
+  controllers.forDeleteRestaurent
+);
 
 //Exporting
 module.exports = RestRouter;
