@@ -1825,7 +1825,7 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
 
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await kots.deleteMany();
+  // const allDeletedOrders = await orders.deleteMany();
   res.send({ msg: "all order deleted successfully" });
 };
 
@@ -1989,11 +1989,29 @@ const forGettingAllRunningKotsOfTheRestaurent = async (req, res) => {
   }
 };
 
+//this is for getting all delivered kots of the restuarent for ordes
+const forGettingAllDeliveredKots = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const restaurant = await Restaurents.findById(id);
+    const myAllKots = await kots.find();
+
+    const allKots = myAllKots.filter(
+      (kot) =>
+        kot.restaurent.id.toString() == restaurant._id.toString() &&
+        kot.isDelivered === true
+    );
+    res.status(200).json({ msg: "all kots", allKots });
+  } catch (err) {
+    console.log("err ", err);
+    res.status(500).json({ msg: "server error", err });
+  }
+};
+
 //this is for changing status of the item of the kot
 const forUpdateTheStatusOfTheItems = async (req, res) => {
   const { kotid, itemid } = req.params;
   const { status } = req.body;
-  console.log("status", status);
 
   try {
     const kot = await kots.findById(kotid);
@@ -2006,7 +2024,6 @@ const forUpdateTheStatusOfTheItems = async (req, res) => {
         item.status = status;
       }
       await kot.save();
-      console.log("second", item);
       res.json({ message: "Item status updated", item });
     }
   } catch (error) {
@@ -2020,18 +2037,18 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
   const { id } = req.params;
   try {
     const kot = await kots.findById(id);
-    const allDelivered = kot.items.every((item) => item.status === "Delivered");
+    const allDelivered = kot.orderItems.every(
+      (item) => item.status === "Delivered"
+    );
     if (!allDelivered) {
-      return res
-        .status(400)
-        .json({ message: "Not all items are delivered yet" });
+      return res.status(400).json({ msg: "Please Delivered All Items" });
     } else {
       kot.isDelivered = true;
       await kot.save();
-
-      res.json({ message: "KOT marked as delivered", kot });
+      res.status(200).json({ msg: "Kot Items Delivered Successfully", kot });
     }
   } catch (error) {
+    console.log("err", error);
     res.status(500).json({ message: "Failed to mark KOT as delivered", error });
   }
 };
@@ -2070,4 +2087,5 @@ module.exports = {
   forGettingAllRunningKotsOfTheRestaurent,
   forUpdateTheStatusOfTheItems,
   forSetKotIsDeliveredTrue,
+  forGettingAllDeliveredKots,
 };

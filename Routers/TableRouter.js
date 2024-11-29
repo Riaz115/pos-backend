@@ -29,6 +29,9 @@ trouter
 trouter
   .route("/get/:id/restaurent/all/running/kots")
   .get(controllers.forGettingAllRunningKotsOfTheRestaurent);
+trouter
+  .route("/get/:id/restaurent/all/delivered/kots")
+  .get(controllers.forGettingAllDeliveredKots);
 
 //All Post ROutes
 trouter.route("/add/:id/table").post(controllers.forAddTables);
@@ -68,9 +71,6 @@ trouter
 trouter
   .route("/add/table/:id/take-away")
   .post(userAuth, controllers.forAddTakeAwayTable);
-trouter
-  .route("/add/kot/:id/statustrue")
-  .post(userAuth, controllers.forSetKotIsDeliveredTrue);
 
 //All Edit Routes
 trouter.route("/edit/:id/table").patch(controllers.forEditTable);
@@ -80,6 +80,9 @@ trouter
 trouter
   .route("/edit/:kotid/kotitems/status/:itemid")
   .patch(controllers.forUpdateTheStatusOfTheItems);
+trouter
+  .route("/add/kot/:id/statustrue")
+  .patch(userAuth, controllers.forSetKotIsDeliveredTrue);
 
 //All Delete Routes
 trouter.route("/delete/:id/table").delete(controllers.forDeleteTable);
