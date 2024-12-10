@@ -11,6 +11,13 @@ const KOTSchema = new mongoose.Schema(
       },
     },
 
+    totalItem: {
+      type: Number,
+    },
+    grandTotal: {
+      type: Number,
+    },
+
     Counter: {
       id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -40,6 +47,10 @@ const KOTSchema = new mongoose.Schema(
       },
     },
 
+    orderType: {
+      type: String,
+    },
+
     order: {
       id: {
         type: String,
@@ -54,6 +65,13 @@ const KOTSchema = new mongoose.Schema(
       type: Number,
     },
 
+    kotOrderNo: {
+      type: Number,
+    },
+    kotNo: {
+      type: Number,
+    },
+
     orderTaker: {
       type: String,
     },
@@ -63,7 +81,16 @@ const KOTSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
-
+        items: [
+          {
+            name: {
+              type: String,
+            },
+            qty: {
+              type: Number,
+            },
+          },
+        ],
         name: {
           type: String,
           required: true,
@@ -110,6 +137,9 @@ const KOTSchema = new mongoose.Schema(
         type: String,
       },
       age: {
+        type: Number,
+      },
+      credit: {
         type: Number,
       },
     },

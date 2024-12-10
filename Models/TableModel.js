@@ -33,6 +33,7 @@ const TableSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
     tableType: {
       type: String,
       enum: ["dine-in", "take-away", "delivery"],
@@ -51,6 +52,10 @@ const TableSchema = new mongoose.Schema(
           ref: "KOT",
         },
       ],
+
+      orderNo: {
+        type: Number,
+      },
       status: {
         type: String,
         enum: ["running", "completed", "empty", "invoiced"],
@@ -87,6 +92,12 @@ const TableSchema = new mongoose.Schema(
         age: {
           type: Number,
         },
+        credit: {
+          type: Number,
+        },
+      },
+      credit: {
+        type: Number,
       },
 
       discount: {

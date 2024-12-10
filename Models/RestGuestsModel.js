@@ -15,25 +15,97 @@ const RestGuestSchema = mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
-      unique: true,
     },
     phone: {
       type: Number,
       required: true,
     },
-    age: {
-      type: Number,
-      required: true,
+    dateOfBirth: {
+      type: Date,
     },
     address: {
       type: String,
-      required: true,
     },
     gender: {
       type: String,
-      required: true,
     },
+
+    totalCredit: {
+      type: Number,
+      default: 0,
+    },
+
+    guestCreditPaidAmounts: [
+      {
+        givenAmount: {
+          type: Number,
+        },
+
+        amountUseData: [
+          {
+            orderid: {
+              type: String,
+            },
+            orderNo: {
+              type: String,
+            },
+
+            paidCreditAmount: {
+              type: Number,
+            },
+
+            remainCreditAmount: {
+              type: Number,
+            },
+          },
+        ],
+        paymentType: {
+          type: String,
+        },
+        amountGivenDate: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    creditOrdersDetail: [
+      {
+        orderid: {
+          type: String,
+        },
+        orderNo: {
+          type: String,
+        },
+
+        totalAmount: {
+          type: Number,
+        },
+        paidAmount: {
+          type: Number,
+        },
+        creditAmount: {
+          type: Number,
+        },
+        paymentMethod: [
+          {
+            payMethod: {
+              type: String,
+            },
+            amount: {
+              type: Number,
+            },
+            payDetail: {
+              type: String,
+            },
+          },
+        ],
+        orderDate: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     date: {
       type: Date,
       default: Date.now(),

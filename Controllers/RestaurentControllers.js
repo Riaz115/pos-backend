@@ -3,6 +3,7 @@ const fs = require("fs");
 const Restaurant = require("../Models/RestaurentModel");
 const Counter = require("../Models/CounterModel");
 const Guests = require("../Models/RestGuestsModel");
+const Orders = require("../Models/OrderSchema");
 
 //this is for images url
 const imageUrl = "http://localhost:8000/restImages/";
@@ -335,7 +336,7 @@ const addRestGuest = async (req, res) => {
   try {
     const id = req.params.id;
 
-    const { name, email, phone, age, gender, address } = req.body;
+    const { name, email, phone, dateOfBirth, gender, address } = req.body;
     const myRestaurent = await Restaurant.findById(id);
 
     //this is for checking if email already exists
@@ -352,7 +353,7 @@ const addRestGuest = async (req, res) => {
         name,
         email,
         phone,
-        age,
+        dateOfBirth,
         address,
         gender,
       });
@@ -405,14 +406,14 @@ const forGetDataGuestForEdit = async (req, res) => {
 //this is for edit the guest of restaurent
 const forEditGuest = async (req, res) => {
   const id = req.params.id;
-  const { name, email, age, phone, address, gender } = req.body;
+  const { name, email, dateOfBirth, phone, address, gender } = req.body;
 
   try {
     const guestData = {
       name,
       email,
       phone,
-      age,
+      dateOfBirth,
       gender,
       address,
     };
@@ -421,6 +422,125 @@ const forEditGuest = async (req, res) => {
   } catch (err) {
     console.log("there is error in the update user function", err);
     res.status(500).json({ msg: "server 0error ", err });
+  }
+};
+
+//this is for getting guest all credit order
+const forGettingGuestAllCreditOrders = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const gusetOrderData = await Guests.findById(id);
+    const allCreditOrders = gusetOrderData.creditOrdersDetail
+      .filter((order) => order.creditAmount > 0)
+      .sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+
+    res.status(200).json({ allCreditOrders, gusetOrderData });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for getting guest credit data with the invoice
+const forGettingGuestCreditSingleOrderData = async (req, res) => {
+  const { orderid, guestid } = req.params;
+  try {
+    const guestData = await Guests.findById(guestid);
+    const orderData = guestData.creditOrdersDetail?.find(
+      (item) => item.orderid.toString() === orderid.toString()
+    );
+
+    res.status(200).json({ guestData, orderData });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for pay total credit of the single invoice of guest
+const forPayGuestSingleCreditOrder = async (req, res) => {
+  const { orderid, guestid } = req.params;
+  const { amount, paymentMethod, detail } = req.body;
+  const guestData = await Guests.findById(guestid);
+  const orderData = await Orders.findById(orderid);
+  try {
+    const invoiceData = guestData.creditOrdersDetail.find(
+      (item) => item.orderid === orderid
+    );
+
+    // Add record to guestCreditPaidAmounts
+    const creditPaidRecord = {
+      givenAmount:
+        invoiceData.creditAmount > parseFloat(amount)
+          ? parseFloat(amount)
+          : invoiceData.creditAmount,
+      amountUseData: [],
+      paymentType: paymentMethod,
+    };
+
+    // Add details of the current payment to amountUseData
+    creditPaidRecord.amountUseData.push({
+      orderid: invoiceData.orderid,
+      orderNo: invoiceData.orderNo,
+      paidCreditAmount:
+        invoiceData.creditAmount > parseFloat(amount)
+          ? parseFloat(amount)
+          : invoiceData.creditAmount,
+      remainCreditAmount: invoiceData?.creditAmount,
+    });
+
+    //this is for add payment method
+    invoiceData?.paymentMethod.push({
+      payMethod: paymentMethod,
+      amount:
+        invoiceData?.creditAmount > parseFloat(amount)
+          ? parseFloat(amount)
+          : invoiceData?.creditAmount,
+      payDetail: detail,
+    });
+
+    //this is for minus from guest total amount
+    if (invoiceData?.creditAmount > 0) {
+      if (invoiceData?.creditAmount > amount) {
+        guestData.totalCredit =
+          (guestData?.totalCredit || 0) - parseFloat(amount);
+        invoiceData.paidAmount =
+          (invoiceData?.paidAmount || 0) + parseFloat(amount);
+
+        orderData.guest.credit =
+          (orderData?.guest?.credit || 0) - parseFloat(amount);
+        orderData.credit = (orderData?.credit || 0) - parseFloat(amount);
+      } else {
+        guestData.totalCredit =
+          (guestData?.totalCredit || 0) - invoiceData?.creditAmount;
+        invoiceData.paidAmount =
+          (invoiceData?.paidAmount || 0) + invoiceData?.creditAmount;
+        orderData.guest.credit =
+          (orderData?.guest?.credit || 0) - invoiceData?.creditAmount;
+        orderData.credit = (orderData?.credit || 0) - invoiceData?.creditAmount;
+      }
+    }
+
+    //this is for minus from order credit amount
+    invoiceData.creditAmount =
+      (invoiceData?.creditAmount || 0) - parseFloat(amount);
+
+    //this is for making zero of credit
+    if (invoiceData?.creditAmount < 0) {
+      invoiceData.creditAmount = 0;
+      orderData.guest.credit = 0;
+      orderData.credit = 0;
+      invoiceData.orderDate = Date.now();
+    }
+
+    // Push the record to guestCreditPaidAmounts
+    guestData.guestCreditPaidAmounts.push(creditPaidRecord);
+
+    await guestData.save();
+    await orderData.save();
+
+    res.status(200).json({ invoiceData, guestData });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
   }
 };
 
@@ -462,6 +582,84 @@ const forDeleteCounter = async (req, res) => {
   }
 };
 
+//this is for pay multiple invoices order data
+const forPayGuestAllCreditOrders = async (req, res) => {
+  const { guestid } = req.params;
+  const { amount, paymentMethod, detail } = req.body;
+
+  try {
+    const guestData = await Guests.findById(guestid);
+
+    let remainingAmount = parseFloat(amount);
+
+    const creditPaidRecord = {
+      givenAmount:
+        guestData.totalCredit > parseFloat(amount)
+          ? parseFloat(amount)
+          : guestData.totalCredit,
+      amountUseData: [],
+      paymentType: paymentMethod,
+    };
+
+    // Sort credit orders by orderDate (oldest first)
+    const sortedOrders = guestData.creditOrdersDetail.sort(
+      (a, b) => new Date(a.orderDate) - new Date(b.orderDate)
+    );
+
+    for (const order of sortedOrders) {
+      if (remainingAmount <= 0) break;
+      const creditAmount = order.creditAmount || 0;
+
+      if (creditAmount > 0) {
+        //this is function jo chooti amount returna krta hai
+        const payAmount = Math.min(creditAmount, remainingAmount);
+
+        // Add payment method details to this order
+        order.paymentMethod.push({
+          payMethod: paymentMethod,
+          amount: payAmount,
+          payDetail: detail,
+        });
+
+        order.orderDate = Date.now();
+
+        order.creditAmount -= payAmount;
+        order.paidAmount += payAmount;
+        guestData.totalCredit -= payAmount;
+        remainingAmount -= payAmount;
+
+        // Add record to amountUseData
+        creditPaidRecord.amountUseData.push({
+          orderid: order.orderid,
+          orderNo: order.orderNo,
+          paidCreditAmount: payAmount,
+          remainCreditAmount: order.creditAmount,
+        });
+
+        // If credit amount is fully settled, set it to 0
+        if (order.creditAmount < 0) {
+          order.creditAmount = 0;
+        }
+      }
+    }
+
+    if (guestData?.totalCredit < 0) {
+      guestData.totalCredit = 0;
+    }
+    guestData.guestCreditPaidAmounts.push(creditPaidRecord);
+    await guestData.save();
+    console.log("guest data", guestData);
+
+    res.status(200).json({
+      msg: "Payment paid successfully",
+      guestData,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
 //exporting
 module.exports = {
   forAddRestaurent,
@@ -480,4 +678,8 @@ module.exports = {
   forDeleteGuest,
   forDeleteRestaurent,
   forDeleteCounter,
+  forGettingGuestAllCreditOrders,
+  forPayGuestSingleCreditOrder,
+  forGettingGuestCreditSingleOrderData,
+  forPayGuestAllCreditOrders,
 };

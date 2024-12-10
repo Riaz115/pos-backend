@@ -5,7 +5,7 @@ const kots = require("../Models/KotSchema");
 const Restaurents = require("../Models/RestaurentModel");
 const allCounters = require("../Models/CounterModel");
 const { v4: uuidv4 } = require("uuid");
-const { KeyObject } = require("crypto");
+const guests = require("../Models/RestGuestsModel");
 
 //this is for add tables
 const forAddTables = async (req, res) => {
@@ -135,6 +135,7 @@ const forAddOrderToTable = async (req, res) => {
   const { id } = req.params;
   const { persons } = req.body;
   const orderId = uuidv4();
+  const orderNo = Math.floor(1000 + Math.random() * 9000);
 
   try {
     let forTable = await tables.findById(id);
@@ -142,6 +143,7 @@ const forAddOrderToTable = async (req, res) => {
     forTable.currentOrder.id = orderId;
     forTable.currentOrder.status = "running";
     forTable.currentOrder.orderType = forTable.tableType;
+    forTable.currentOrder.orderNo = orderNo;
     await forTable.save();
 
     res.status(201).json({ msg: "order Added Successfully" });
@@ -157,6 +159,7 @@ const forAddTakeAwayTable = async (req, res) => {
   const { tableType } = req.body;
   const orderId = uuidv4();
   const tableNo = Math.floor(1000 + Math.random() * 9000);
+  const orderNo = Math.floor(1000 + Math.random() * 9000);
 
   try {
     let myCounter = await allCounters.findById(id).populate({
@@ -193,6 +196,7 @@ const forAddTakeAwayTable = async (req, res) => {
     forTable.currentOrder.id = orderId;
     forTable.currentOrder.status = "running";
     forTable.currentOrder.orderType = forTable.tableType;
+    forTable.currentOrder.orderNo = orderNo;
     await forTable.save();
 
     res.status(201).json({ msg: "Table Added Successfully", savedTable });
@@ -203,10 +207,17 @@ const forAddTakeAwayTable = async (req, res) => {
 };
 
 //this is for the add kot to the order
+let myNewKOT = {};
 const forAddKotToOrder = async (req, res) => {
   const { id, restId } = req.params;
   const { orderItems, guestData, paymentMethod, amount, frontEndType, detail } =
     req.body;
+
+  orderItems?.map((item) => {
+    item?.items?.map((newitems) => {
+      newitems.qty = newitems.qty * item.quantity;
+    });
+  });
 
   const table = await tables.findById(id).populate({
     path: "Counter.id",
@@ -216,6 +227,7 @@ const forAddKotToOrder = async (req, res) => {
   });
   let restData = await Restaurents.findById(restId);
   let number = table.currentOrder.kots.length + 1;
+  const kotNo = Math.floor(1000 + Math.random() * 9000);
   const newRestData = table?.Counter?.id?.restaurent?.id || "N/A";
   const counterData = table?.Counter?.id || "N/A";
 
@@ -241,7 +253,7 @@ const forAddKotToOrder = async (req, res) => {
       let newGuest = {};
       if (guestData) {
         newGuest = {
-          id: guestData._id,
+          id: guestData.id,
           name: guestData.name,
           email: guestData.email,
           phone: guestData.phone,
@@ -252,6 +264,7 @@ const forAddKotToOrder = async (req, res) => {
       }
 
       let totalAmount = 0;
+
       if (orderItems) {
         totalAmount = orderItems.reduce(
           (acc, item) => acc + item.totalPrice,
@@ -347,14 +360,20 @@ const forAddKotToOrder = async (req, res) => {
           restaurent,
           Counter,
           number,
+          totalItem: orderItems.length,
           tableData: forTableData,
           orderItems,
           orderTaker: req.user.name,
+          grandTotal: totalAmount,
           guest: newGuest,
+          orderType: table.tableType,
+          kotNo: kotNo,
+          kotOrderNo: table.currentOrder.orderNo,
         });
 
         table.currentOrder.guest = newGuest;
         await newKOT.save();
+        myNewKOT = newKOT;
         table.currentOrder.kots.push(newKOT._id);
         await table.save();
       }
@@ -370,6 +389,20 @@ const forAddKotToOrder = async (req, res) => {
             table.currentOrder.paymentMethod = [];
           }
           if (typeof paymentMethod === "string" && !isNaN(amount)) {
+            if (paymentMethod === "credit") {
+              if (table.currentOrder.guest) {
+                table.currentOrder.credit =
+                  table.currentOrder.remainAmount > amount
+                    ? (table.currentOrder.credit || 0) + parseFloat(amount)
+                    : (table.currentOrder.credit || 0) +
+                      table.currentOrder.remainAmount;
+              } else {
+                res
+                  .status(400)
+                  .json({ msg: "please select guest for this credit amount" });
+              }
+            }
+
             table.currentOrder.paymentMethod.push({
               payMethod: paymentMethod,
               amount:
@@ -439,7 +472,7 @@ const forAddKotToOrder = async (req, res) => {
 
         res
           .status(201)
-          .json({ msg: "Payment method added successfully", table });
+          .json({ msg: "Payment method added successfully", table, myNewKOT });
       } catch (err) {
         console.error(err);
         res.status(500).json({ msg: "Server Error", error: err.message });
@@ -453,7 +486,7 @@ const forAddKotToOrder = async (req, res) => {
       let newGuest = {};
       if (guestData) {
         newGuest = {
-          id: guestData._id,
+          id: guestData.id,
           name: guestData.name,
           email: guestData.email,
           phone: guestData.phone,
@@ -462,21 +495,6 @@ const forAddKotToOrder = async (req, res) => {
           age: guestData.age,
         };
       }
-      const newKOT = new kots({
-        order: { id: table.currentOrder.id },
-        table: table.tableNo,
-        number,
-        restaurent,
-        Counter,
-        tableData: forTableData,
-        orderItems,
-        orderTaker: req.user.name,
-        guest: newGuest,
-      });
-      table.currentOrder.status = "running";
-      table.currentOrder.guest = newGuest;
-      await table.save();
-      await newKOT.save();
 
       const totalAmount = orderItems.reduce(
         (acc, item) => acc + item.totalPrice,
@@ -490,6 +508,28 @@ const forAddKotToOrder = async (req, res) => {
         (table.currentOrder.subTotal || 0) + totalAmount;
       table.currentOrder.foodAmount =
         (table.currentOrder.foodAmount || 0) + totalAmount;
+
+      const newKOT = new kots({
+        order: { id: table.currentOrder.id },
+        table: table.tableNo,
+        number,
+        restaurent,
+        Counter,
+        totalItem: orderItems.length,
+        tableData: forTableData,
+        orderItems,
+        orderTaker: req.user.name,
+        guest: newGuest,
+        grandTotal: totalAmount,
+        orderType: table.tableType,
+        kotNo: kotNo,
+        kotOrderNo: table.currentOrder.orderNo,
+      });
+      table.currentOrder.status = "running";
+      table.currentOrder.guest = newGuest;
+      await table.save();
+      await newKOT.save();
+
       //this is for service charges
       if (table.tableType === "dine-in") {
         let serviceCharge = 0;
@@ -543,7 +583,7 @@ const forAddKotToOrder = async (req, res) => {
       await table.save();
       res
         .status(201)
-        .json({ message: "KOT added to current order", kotId: newKOT._id });
+        .json({ message: "KOT added to current order", newKOT, table });
     } catch (err) {
       console.log("err", err);
       res.status(500).json({ msg: "Server Error", err });
@@ -567,9 +607,9 @@ const forGetRestaurentAllOrders = async (req, res) => {
   const allOrders = await orders.find();
 
   try {
-    const myFilterOrders = allOrders.filter(
-      (order) => order.restaurent.id === id
-    );
+    const myFilterOrders = allOrders
+      .filter((order) => order.restaurent.id === id)
+      .sort((a, b) => b.createdAt - a.createdAt);
 
     res.status(200).json({ msg: "success data", myFilterOrders });
   } catch (err) {
@@ -722,6 +762,7 @@ const forOrderInvoice = async (req, res) => {
   try {
     if (guestData) {
       let newGuest = {
+        id: guestData.id,
         name: guestData.name,
         email: guestData.email,
         phone: guestData.phone,
@@ -934,7 +975,6 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
   const { id } = req.params;
   const { paymentMethod, amount, frontEndType, detail } = req.body;
   let allOrders = await orders.find();
-  let invocieNO = allOrders.length + 1;
   const myNewTable = await tables.findById(id);
 
   // Populate based on tableType
@@ -960,6 +1000,8 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
   if (!table) {
     return res.status(404).json({ msg: "Table not found" });
   }
+
+  const myGuest = await guests.findById(table?.currentOrder?.guest?.id);
 
   let restData = "N/A";
   let counterData = "N/A";
@@ -992,6 +1034,8 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
   try {
     if (restData?.payemtPreOrPost === "pre") {
       table.currentOrder.status = "completed";
+      table.currentOrder.guest.credit = table.currentOrder.credit;
+
       await table.save();
 
       const newOrder = new orders({
@@ -1019,13 +1063,31 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
         restaurent,
         counter,
         counterArea,
-        invoiceNo: invocieNO,
+        invoiceNo: table.currentOrder.orderNo,
         guest: table.currentOrder.guest,
         orderType: table.tableType,
         deliveryCharges: table.currentOrder.deliveryCharges,
+        credit: table.currentOrder.credit,
       });
 
       await newOrder.save();
+      if (myGuest && table.currentOrder.credit) {
+        const detailForGuestCredit = {
+          orderNo: newOrder.invoiceNo,
+          totalAmount: newOrder.totalAmount,
+          orderid: newOrder._id,
+          paidAmount:
+            table?.currentOrder?.totalAmount > table?.currentOrder?.credit
+              ? table?.currentOrder?.totalAmount - table?.currentOrder?.credit
+              : 0,
+          creditAmount: table?.currentOrder?.credit,
+        };
+
+        myGuest.totalCredit = myGuest.totalCredit + table.currentOrder.credit;
+        myGuest.creditOrdersDetail.push(detailForGuestCredit);
+
+        await myGuest.save();
+      }
 
       table.orders.push({ id: newOrder._id });
 
@@ -1035,6 +1097,7 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
         kots: [],
         status: "empty",
         gstTex: 0,
+        guest: {},
         serviceCharges: 0,
         discountType: null,
         discount: null,
@@ -1054,14 +1117,37 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
           table.currentOrder.paymentMethod = [];
         }
         if (typeof paymentMethod === "string" && !isNaN(amount)) {
-          table.currentOrder.paymentMethod.push({
-            payMethod: paymentMethod,
-            amount:
-              table.currentOrder.remainAmount > parseFloat(amount)
-                ? parseFloat(amount)
-                : table.currentOrder.remainAmount,
-            payDetail: detail,
-          });
+          if (paymentMethod === "credit") {
+            if (table.currentOrder.guest) {
+              table.currentOrder.credit =
+                table.currentOrder.remainAmount > amount
+                  ? (table.currentOrder.credit || 0) + parseFloat(amount)
+                  : (table.currentOrder.credit || 0) +
+                    table.currentOrder.remainAmount;
+
+              table.currentOrder.paymentMethod.push({
+                payMethod: paymentMethod,
+                amount:
+                  table.currentOrder.remainAmount > parseFloat(amount)
+                    ? parseFloat(amount)
+                    : table.currentOrder.remainAmount,
+                payDetail: detail,
+              });
+            } else {
+              res.status(400).json({
+                msg: "Please select guest for this testing and checking debit amount",
+              });
+            }
+          } else {
+            table.currentOrder.paymentMethod.push({
+              payMethod: paymentMethod,
+              amount:
+                table.currentOrder.remainAmount > parseFloat(amount)
+                  ? parseFloat(amount)
+                  : table.currentOrder.remainAmount,
+              payDetail: detail,
+            });
+          }
 
           if (
             table.currentOrder.paidAmount !== undefined ||
@@ -1103,6 +1189,7 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
 
       if (table?.currentOrder?.remainAmount === 0) {
         table.currentOrder.status = "completed";
+        table.currentOrder.guest.credit = table.currentOrder.credit;
         await table.save();
 
         const newOrder = new orders({
@@ -1130,14 +1217,32 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
           restaurent,
           counter,
           counterArea,
-          invoiceNo: invocieNO,
+          invoiceNo: table.currentOrder.orderNo,
           guest: table.currentOrder.guest,
           orderType: table.tableType,
           deliveryCharges: table.currentOrder.deliveryCharges,
+          credit: table.currentOrder.credit,
         });
 
-        await newOrder.save();
+        if (table?.currentOrder?.guest && table.currentOrder.credit) {
+          const detailForGuestCredit = {
+            orderNo: newOrder.invoiceNo,
+            totalAmount: newOrder.totalAmount,
+            orderid: newOrder._id,
+            paidAmount:
+              table?.currentOrder?.totalAmount > table?.currentOrder?.credit
+                ? table?.currentOrder?.totalAmount - table?.currentOrder?.credit
+                : 0,
+            creditAmount: table?.currentOrder?.credit,
+          };
 
+          myGuest.totalCredit = myGuest.totalCredit + table.currentOrder.credit;
+          myGuest.creditOrdersDetail.push(detailForGuestCredit);
+
+          await myGuest.save();
+        }
+
+        await newOrder.save();
         table.orders.push({ id: newOrder._id });
 
         table.currentOrder = {
@@ -1146,6 +1251,7 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
           kots: [],
           status: "empty",
           gstTex: 0,
+          guest: {},
           serviceCharges: 0,
           discountType: null,
           discount: null,
@@ -1174,6 +1280,7 @@ let myIndex = 0;
 const forAddPaymentMethodToTheOrder = async (req, res) => {
   const { id } = req.params;
   const { paymentMethod, amount, frontEndType, detail } = req.body;
+
   try {
     const table = await tables.findById(id);
 
@@ -1186,11 +1293,26 @@ const forAddPaymentMethodToTheOrder = async (req, res) => {
       if (myIndex === 1) {
         table.currentOrder.paymentMethod = [];
         table.currentOrder.paidAmount = 0;
+        table.currentOrder.credit = 0;
       }
       if (!Array.isArray(table.currentOrder.paymentMethod)) {
         table.currentOrder.paymentMethod = [];
       }
       if (typeof paymentMethod === "string" && !isNaN(amount)) {
+        if (paymentMethod === "credit") {
+          if (table.currentOrder.guest) {
+            table.currentOrder.credit =
+              table.currentOrder.remainAmount > amount
+                ? (table.currentOrder.credit || 0) + parseFloat(amount)
+                : (table.currentOrder.credit || 0) +
+                  table.currentOrder.remainAmount;
+          } else {
+            res
+              .status(400)
+              .json({ msg: "please select guest for this credit amount" });
+          }
+        }
+
         table.currentOrder.paymentMethod.push({
           payMethod: paymentMethod,
           amount:
@@ -1244,7 +1366,7 @@ const forAddPaymentMethodToTheOrder = async (req, res) => {
     }
 
     await table.save();
-    console.log("table data", table.currentOrder);
+    // console.log("table data", table.currentOrder);
     res.status(201).json({ msg: "Payment method added successfully" });
   } catch (err) {
     console.error(err);
@@ -1256,9 +1378,9 @@ const forAddPaymentMethodToTheOrder = async (req, res) => {
 const forAddGuestToOrder = async (req, res) => {
   const { id } = req.params;
   const { guestData } = req.body;
-  const table = await tables.findById(id);
 
   try {
+    const table = await tables.findById(id);
     if (guestData) {
       let newGuest = {
         id: guestData._id,
@@ -1396,6 +1518,7 @@ const forNoChargeOrder = async (req, res) => {
       persons: null,
       kots: [],
       status: "empty",
+      guest: {},
       gstTex: 0,
       serviceCharges: 0,
       discountType: null,
@@ -1429,132 +1552,7 @@ const forGettingKotdataForEdit = async (req, res) => {
   }
 };
 
-//this is for for voiding kot
-// const forVoidAndAddKotItems = async (req, res) => {
-//   const { id, kotid } = req.params;
-//   const { orderItems } = req.body;
-
-//   try {
-//     const kot = await kots.findById(kotid);
-//     const myNewTable = await tables.findById(id);
-
-//     // Populate based on tableType
-//     const table = await tables.findById(id).populate(
-//       myNewTable.tableType === "dine-in"
-//         ? {
-//             path: "counterArea.id",
-//             populate: {
-//               path: "counter.id",
-//               populate: {
-//                 path: "restaurent.id",
-//               },
-//             },
-//           }
-//         : {
-//             path: "Counter.id",
-//             populate: {
-//               path: "restaurent.id",
-//             },
-//           }
-//     );
-
-//     // Extract restaurant data
-//     const restData =
-//       myNewTable.tableType === "dine-in"
-//         ? table?.counterArea?.id?.counter?.id?.restaurent?.id
-//         : table?.Counter?.id?.restaurent?.id;
-
-//     kot.orderItems = orderItems;
-//     await kot.save();
-
-//     // Recalculate totalAmount
-//     let totalAmount = 0;
-//     for (const kotId of table.currentOrder.kots) {
-//       const kotData = await kots.findById(kotId);
-//       if (kotData?.orderItems) {
-//         totalAmount += kotData.orderItems.reduce((acc, item) => {
-//           return acc + (item.totalPrice || 0);
-//         }, 0);
-//       }
-//     }
-
-//     if (isNaN(totalAmount)) totalAmount = 0;
-
-//     // Update currentOrder fields
-//     table.currentOrder.subTotal = totalAmount;
-//     table.currentOrder.foodAmount = totalAmount;
-
-//     console.log("sub total 1", table.currentOrder.subTotal);
-
-//     table.currentOrder.subTotal =
-//       table.currentOrder.subTotal -
-//       table.currentOrder.discount +
-//       table.currentOrder.parcel;
-
-//     console.log("sub total 1", table.currentOrder.subTotal);
-
-//     //this is for service charges
-//     if (table?.tableType === "dine-in") {
-//       if (table.currentOrder.isServiceCharges !== "no") {
-//         let serviceCharge = 0;
-//         if (restData.typeOfServiceCharges === "percentage") {
-//           serviceCharge =
-//             (table.currentOrder.subTotal * restData.serviceChargesAmount) / 100;
-//         } else if (restData.typeOfServiceCharges === "number") {
-//           serviceCharge = restData.serviceChargesAmount;
-//         }
-//         table.currentOrder.serviceCharges = serviceCharge;
-//       }
-//     }
-
-//     //this is for delivery charges
-//     if (table.tableType === "delivery") {
-//       let deliveryCharges = 0;
-//       if (restData.typeOfDeliveryCharges === "percentage") {
-//         deliveryCharges =
-//           (table.currentOrder.subTotal * restData.deliveryChargesAmount) / 100;
-//       } else if (restData.typeOfDeliveryCharges === "number") {
-//         deliveryCharges = restData.deliveryChargesAmount;
-//       }
-//       table.currentOrder.deliveryCharges = deliveryCharges;
-//     }
-
-//     //this is for tex charges
-//     if (table.currentOrder.isGstTex !== "no") {
-//       let foodTex = 0;
-//       if (restData.gstTexType === "percentage") {
-//         foodTex = (table.currentOrder.subTotal * restData.gstTexAmount) / 100;
-//       } else if (restData.gstTexType === "number") {
-//         foodTex = restData.gstTexAmount;
-//       }
-//       table.currentOrder.gstTex = foodTex;
-//     }
-
-//     //this is for total of all tables
-//     if (table.tableType === "dine-in") {
-//       table.currentOrder.totalAmount =
-//         table.currentOrder.subTotal +
-//         table.currentOrder.serviceCharges +
-//         table.currentOrder.gstTex;
-//     } else if (table.tableType === "take-away") {
-//       table.currentOrder.totalAmount =
-//         table.currentOrder.subTotal + table.currentOrder.gstTex;
-//     } else if (table.tableType === "delivery") {
-//       table.currentOrder.totalAmount =
-//         table.currentOrder.subTotal +
-//         table.currentOrder.gstTex +
-//         table.currentOrder.deliveryCharges;
-//     }
-
-//     await table.save();
-
-//     res
-//       .status(201)
-//       .json({ message: "KOT updated in current order", kotId: kot._id });
-//   } catch (err) {
-//     res.status(500).json({ msg: "Server Error", error: err.message });
-//   }
-// };
+//this is for the void and add kot items
 const forVoidAndAddKotItems = async (req, res) => {
   const { id, kotid } = req.params;
   const { orderItems } = req.body;
@@ -1589,7 +1587,7 @@ const forVoidAndAddKotItems = async (req, res) => {
         : table?.Counter?.id?.restaurent?.id;
 
     kot.orderItems = orderItems;
-    await kot.save();
+    (kot.totalItem = orderItems.length), await kot.save();
 
     let totalAmount = 0;
     for (const kotId of table.currentOrder.kots) {
@@ -1602,6 +1600,7 @@ const forVoidAndAddKotItems = async (req, res) => {
     }
 
     if (isNaN(totalAmount)) totalAmount = 0;
+    kot.grandTotal = totalAmount;
 
     table.currentOrder.subTotal = totalAmount || 0;
     table.currentOrder.foodAmount = totalAmount || 0;
@@ -1677,6 +1676,8 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
   const { prevtableid, targettableid, kotid } = req.params;
   const { orderItems, person } = req.body;
   const orderId = uuidv4();
+  const kotNo = Math.floor(1000 + Math.random() * 9000);
+
   let prevTable = await tables.findById(prevtableid).populate({
     path: "counterArea.id",
     populate: {
@@ -1687,10 +1688,34 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
     },
   });
 
-  const targetTable = await tables.findById(targettableid);
+  const targetTable = await tables.findById(targettableid).populate({
+    path: "counterArea.id",
+    populate: {
+      path: "counter.id",
+      populate: {
+        path: "restaurent.id",
+      },
+    },
+  });
+
+  orderItems?.map((item) => {
+    item?.items?.map((newitems) => {
+      newitems.qty = newitems.qty * item.quantity;
+    });
+  });
   const kotData = await kots.findById(kotid);
   let number = targetTable.currentOrder.kots.length + 1;
   let restData = prevTable?.counterArea?.id?.counter?.id?.restaurent?.id;
+  let counterData = targetTable?.counterArea?.id?.counter?.id;
+
+  const Counter = {
+    id: counterData?._id,
+    name: counterData?.counterName,
+  };
+  const forTableData = {
+    id: targetTable?._id,
+    name: targetTable?.tableNo,
+  };
 
   try {
     // Handling the transfer to the target table
@@ -1704,16 +1729,10 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
       await targetTable.save();
     }
 
-    const newKOT = new kots({
-      order: { id: targetTable.currentOrder.id },
-      table: targetTable.tableNo,
-      number,
-      orderItems,
-      orderTaker: req.user.name,
-    });
-
-    await targetTable.save();
-    await newKOT.save();
+    const restaurent = {
+      id: restData?.id,
+      name: restData?.restName,
+    };
 
     const totalAmount = orderItems.reduce(
       (acc, item) => acc + item.totalPrice,
@@ -1729,6 +1748,25 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
       (targetTable.currentOrder.subTotal || 0) + totalAmount;
     targetTable.currentOrder.foodAmount =
       (targetTable.currentOrder.foodAmount || 0) + totalAmount;
+
+    const newKOT = new kots({
+      order: { id: targetTable.currentOrder.id },
+      table: targetTable.tableNo,
+      number,
+      orderItems,
+      orderTaker: req.user.name,
+      restaurent,
+      Counter,
+      number,
+      totalItem: orderItems.length,
+      tableData: forTableData,
+      grandTotal: totalAmount,
+      orderType: targetTable.tableType,
+      kotNo: kotNo,
+    });
+
+    await targetTable.save();
+    await newKOT.save();
 
     // Handling service charges for the target table
     let serviceCharge = 0;
@@ -1825,7 +1863,7 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
 
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await orders.deleteMany();
+  // const allDeletedOrders = await guests.deleteMany();
   res.send({ msg: "all order deleted successfully" });
 };
 
@@ -1976,12 +2014,12 @@ const forGettingAllRunningKotsOfTheRestaurent = async (req, res) => {
     const restaurant = await Restaurents.findById(id);
     const myAllKots = await kots.find();
 
-    const allRunningKots = myAllKots.filter(
-      (kot) =>
-        kot.restaurent.id.toString() == restaurant._id.toString() &&
-        kot.isDelivered === false
-    );
-
+    const allRunningKots = myAllKots
+      .filter(
+        (kot) =>
+          kot.restaurent.id == restaurant._id && kot.isDelivered === false
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
     res.status(200).json({ msg: "all kots", allRunningKots });
   } catch (err) {
     console.log("err ", err);
@@ -1996,11 +2034,11 @@ const forGettingAllDeliveredKots = async (req, res) => {
     const restaurant = await Restaurents.findById(id);
     const myAllKots = await kots.find();
 
-    const allKots = myAllKots.filter(
-      (kot) =>
-        kot.restaurent.id.toString() == restaurant._id.toString() &&
-        kot.isDelivered === true
-    );
+    const allKots = myAllKots
+      .filter(
+        (kot) => kot.restaurent.id == restaurant._id && kot.isDelivered === true
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
     res.status(200).json({ msg: "all kots", allKots });
   } catch (err) {
     console.log("err ", err);
@@ -2016,7 +2054,7 @@ const forUpdateTheStatusOfTheItems = async (req, res) => {
   try {
     const kot = await kots.findById(kotid);
     const item = kot.orderItems.id(itemid);
-    console.log(item);
+
     if (!item) {
       return res.status(404).json({ message: "Item not found" });
     } else {

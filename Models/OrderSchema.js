@@ -68,8 +68,8 @@ const OrderSchema = new mongoose.Schema(
     foodAmount: {
       type: Number,
     },
-    restName: {
-      type: String,
+    credit: {
+      type: Number,
     },
     guest: {
       name: {
@@ -90,18 +90,9 @@ const OrderSchema = new mongoose.Schema(
       age: {
         type: Number,
       },
-    },
-
-    counterName: {
-      type: String,
-    },
-
-    areaName: {
-      type: String,
-    },
-
-    tableNo: {
-      type: String,
+      credit: {
+        type: Number,
+      },
     },
 
     discount: {

@@ -42,6 +42,9 @@ CounterUserRouter.route("/forallcounterareas/get/all").get(
 CounterUserRouter.route("/getdataforeditcounterarea/:id").get(
   controllers.forEditGetDataCounterArea
 );
+CounterUserRouter.route("/get/data/:id/counter").get(
+  controllers.forGettingDataOfCounter
+);
 //all post routes
 CounterUserRouter.route("/addcounteruser/:counterid").post(
   upload.single("counterUserImage"),

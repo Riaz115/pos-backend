@@ -288,6 +288,17 @@ const forGettingAllCounterAreas = async (req, res) => {
   }
 };
 
+//this is for getting data of counter
+const forGettingDataOfCounter = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const counterData = await Counter.findById(id);
+    res.status(200).json({ counterData });
+  } catch (err) {
+    console.log("err", err);
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
 module.exports = {
   forAddUserInCounter,
   forGetCounterAllUser,
@@ -299,4 +310,5 @@ module.exports = {
   forEditCounterArea,
   forDelteAreaOfTheCounter,
   forGettingAllCounterAreas,
+  forGettingDataOfCounter,
 };

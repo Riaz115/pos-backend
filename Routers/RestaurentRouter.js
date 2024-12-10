@@ -103,6 +103,13 @@ RestRouter.route("/forgetall/:id/guests").get(controllers.forGetAllGuest);
 RestRouter.route("/getforedit/:id/guest").get(
   controllers.forGetDataGuestForEdit
 );
+RestRouter.route("/getforallorders/:id/credit").get(
+  controllers.forGettingGuestAllCreditOrders
+);
+RestRouter.route("/getsingle/:orderid/creditorder/data/:guestid").get(
+  userAuth,
+  controllers.forGettingGuestCreditSingleOrderData
+);
 
 //all post routes
 RestRouter.route("/addRestaurent").post(
@@ -130,6 +137,14 @@ RestRouter.route("/foradd/:id/combo").post(
 );
 
 RestRouter.route("/foradd/:id/guest").post(controllers.addRestGuest);
+RestRouter.route("/forpay/singlecreditorder/:orderid/guest/:guestid").post(
+  userAuth,
+  controllers.forPayGuestSingleCreditOrder
+);
+RestRouter.route("/forpay/multiorder/credit/:guestid/guest/").post(
+  userAuth,
+  controllers.forPayGuestAllCreditOrders
+);
 
 //all update routes
 RestRouter.route("/editRestaurent/:id").patch(
