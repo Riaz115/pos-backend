@@ -134,9 +134,11 @@ const forGetDataforEditRest = async (req, res) => {
     const myRest = await Restaurant.findById(id);
     let restLogo = myRest.restLogo;
     if (restLogo !== "") {
+      myRest.restLogo = `${imageUrl}/${myRest.restLogo}`;
       restLogo = `${imageUrl}/${myRest.restLogo}`;
     } else {
       restLogo = "";
+      myRest.restLogo = "";
     }
 
     res.status(200).json({ myRest, restLogo: restLogo });
@@ -648,7 +650,6 @@ const forPayGuestAllCreditOrders = async (req, res) => {
     }
     guestData.guestCreditPaidAmounts.push(creditPaidRecord);
     await guestData.save();
-    console.log("guest data", guestData);
 
     res.status(200).json({
       msg: "Payment paid successfully",

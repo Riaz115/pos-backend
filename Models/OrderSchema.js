@@ -99,6 +99,8 @@ const OrderSchema = new mongoose.Schema(
       type: Number,
     },
 
+    dayId: { type: mongoose.Schema.Types.ObjectId, ref: "DayOfRestaurent" },
+
     serviceCharges: {
       type: Number,
     },

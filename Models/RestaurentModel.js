@@ -72,6 +72,23 @@ const restaurantSchema = new mongoose.Schema(
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Combo" },
       },
     ],
+
+    cashBookAcountHead: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "RestCashbookacounthead",
+        },
+      },
+    ],
+    cashBookAcountName: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "RestCashbookacountname",
+        },
+      },
+    ],
     stockCatagories: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "StockCatagory" },

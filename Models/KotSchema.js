@@ -10,7 +10,10 @@ const KOTSchema = new mongoose.Schema(
         type: String,
       },
     },
-
+    dayId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DayOfRestaurent",
+    },
     totalItem: {
       type: Number,
     },

@@ -6,6 +6,7 @@ const Restaurents = require("../Models/RestaurentModel");
 const allCounters = require("../Models/CounterModel");
 const { v4: uuidv4 } = require("uuid");
 const guests = require("../Models/RestGuestsModel");
+const daysModel = require("../Models/DayStartAndCloseModel");
 
 //this is for add tables
 const forAddTables = async (req, res) => {
@@ -213,6 +214,18 @@ const forAddKotToOrder = async (req, res) => {
   const { orderItems, guestData, paymentMethod, amount, frontEndType, detail } =
     req.body;
 
+  const openDay = await daysModel.findOne({
+    "restaurant.id": restId,
+    isClosed: false,
+  });
+
+  let dayId;
+  if (!openDay) {
+    res.status(400).json({ msg: "Please open the restaurent" });
+  } else {
+    dayId = openDay._id;
+  }
+
   orderItems?.map((item) => {
     item?.items?.map((newitems) => {
       newitems.qty = newitems.qty * item.quantity;
@@ -369,6 +382,7 @@ const forAddKotToOrder = async (req, res) => {
           orderType: table.tableType,
           kotNo: kotNo,
           kotOrderNo: table.currentOrder.orderNo,
+          dayId,
         });
 
         table.currentOrder.guest = newGuest;
@@ -524,6 +538,7 @@ const forAddKotToOrder = async (req, res) => {
         orderType: table.tableType,
         kotNo: kotNo,
         kotOrderNo: table.currentOrder.orderNo,
+        dayId,
       });
       table.currentOrder.status = "running";
       table.currentOrder.guest = newGuest;
@@ -1016,6 +1031,18 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
     counterData = table?.Counter?.id || "N/A";
   }
 
+  const openDay = await daysModel.findOne({
+    "restaurant.id": restData?.id,
+    isClosed: false,
+  });
+
+  let dayId;
+  if (!openDay) {
+    res.status(400).json({ msg: "Please open the restaurent" });
+  } else {
+    dayId = openDay._id;
+  }
+
   const restaurent = {
     id: restData?.id,
     name: restData?.restName,
@@ -1043,6 +1070,7 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
           id: table._id,
           name: table?.tableNo,
         },
+        dayId,
         id: table.currentOrder.id,
         persons: table.currentOrder.persons,
         kots: table.currentOrder.kots,
@@ -1197,6 +1225,7 @@ const currentOrderSaveAsOrderToTable = async (req, res) => {
             id: table._id,
             name: table?.tableNo,
           },
+          dayId,
           id: table.currentOrder.id,
           persons: table.currentOrder.persons,
           kots: table.currentOrder.kots,
@@ -1461,6 +1490,18 @@ const forNoChargeOrder = async (req, res) => {
       counterData = table?.Counter?.id || "N/A";
     }
 
+    const openDay = await daysModel.findOne({
+      "restaurant.id": restData?.id,
+      isClosed: false,
+    });
+
+    let dayId;
+    if (!openDay) {
+      res.status(400).json({ msg: "Please open the restaurent" });
+    } else {
+      dayId = openDay._id;
+    }
+
     const restaurent = {
       id: restData?.id,
       name: restData?.restName,
@@ -1481,6 +1522,7 @@ const forNoChargeOrder = async (req, res) => {
       table: {
         id: table._id,
       },
+      dayId,
       id: table.currentOrder.id,
       persons: table.currentOrder.persons,
       kots: table.currentOrder.kots,
@@ -1861,12 +1903,6 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
   }
 };
 
-//this is for delete all order
-const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await guests.deleteMany();
-  res.send({ msg: "all order deleted successfully" });
-};
-
 //this is for transfar table
 const forTransfarTable = async (req, res) => {
   const { prevtableid, targettableid } = req.params;
@@ -2089,6 +2125,12 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
     console.log("err", error);
     res.status(500).json({ message: "Failed to mark KOT as delivered", error });
   }
+};
+
+//this is for delete all order
+const forDeleteAllOrders = async (req, res) => {
+  // const allDeletedOrders = await orders.deleteMany();
+  res.send({ msg: "all order deleted successfully" });
 };
 
 //exporting

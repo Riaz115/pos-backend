@@ -5,6 +5,7 @@ const router = require("./Routers/MyRouters");
 const restRouter = require("./Routers/RestaurentRouter");
 const counterUser = require("./Routers/CounterUserRouter");
 const tableRouter = require("./Routers/TableRouter");
+const daysRouter = require("./Routers/DayCloseOpenRouter");
 const DbConn = require("./DB/DBConn");
 const cors = require("cors");
 
@@ -31,6 +32,7 @@ app.use("/api", router);
 app.use("/api", restRouter);
 app.use("/api", counterUser);
 app.use("/api", tableRouter);
+app.use("/api", daysRouter);
 
 //listening the app
 DbConn()
