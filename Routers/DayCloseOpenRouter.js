@@ -27,6 +27,14 @@ daysRouter
   .route("/restaurent/:id/get/all/expenes/cashbook")
   .get(userAuth, controllers.forGettingAllTransitionOfCashBookOfRestaurent);
 
+daysRouter
+  .route("/restaurent/:id/get/fotedit/one/expenes/cashbook")
+  .get(userAuth, controllers.forGettingDataForEditTheTransitionToCashBook);
+
+daysRouter
+  .route("/restaurent/:restid/get/data/ofrunningday/:dayid/rest")
+  .get(userAuth, controllers.forGettingRestRunningDayData);
+
 //all posts routes
 daysRouter
   .route("/restaurent/:id/open/day/start")
@@ -58,6 +66,10 @@ daysRouter
   .route("/restaurent/:id/for/edit/acc/name/cashbook")
   .patch(userAuth, controllers.forEditAccNameCashBook);
 
+daysRouter
+  .route("/restaurent/:restid/foredit/:id/transition/running/day")
+  .patch(userAuth, controllers.forEditTheTransitionInRunningDay);
+
 //all delete routes
 
 daysRouter
@@ -67,6 +79,10 @@ daysRouter
 daysRouter
   .route("/restaurent/:id/delete/account/name/cashbook")
   .delete(userAuth, controllers.forDeleteAccName);
+
+daysRouter
+  .route("/restaurent/transition/:id/delete/expense/:dayid/fromday")
+  .delete(userAuth, controllers.forDeletExpenseTranstion);
 
 //exporting
 module.exports = daysRouter;

@@ -6,16 +6,13 @@ const expenseSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurent",
     },
-    name: {
-      type: String,
-    },
   },
   dayId: { type: mongoose.Schema.Types.ObjectId, ref: "DayOfRestaurent" },
   amount: { type: Number, required: true },
   exprensType: { type: String, enum: ["paid", "received"], required: true },
   accountName: { type: String, required: true },
   headAcount: { type: String, required: true },
-  description: { type: String, required: true },
+  description: { type: String },
   paymentType: { type: String, required: true },
   createdBy: {
     id: {

@@ -7,6 +7,7 @@ const allCounters = require("../Models/CounterModel");
 const { v4: uuidv4 } = require("uuid");
 const guests = require("../Models/RestGuestsModel");
 const daysModel = require("../Models/DayStartAndCloseModel");
+const allExpenses = require("../Models/ExpensesModel");
 
 //this is for add tables
 const forAddTables = async (req, res) => {
@@ -221,7 +222,7 @@ const forAddKotToOrder = async (req, res) => {
 
   let dayId;
   if (!openDay) {
-    res.status(400).json({ msg: "Please open the restaurent" });
+    // res.status(400).json({ msg: "Please open the restaurent" });
   } else {
     dayId = openDay._id;
   }
@@ -288,6 +289,16 @@ const forAddKotToOrder = async (req, res) => {
           (table.currentOrder.subTotal || 0) + totalAmount;
         table.currentOrder.foodAmount =
           (table.currentOrder.foodAmount || 0) + totalAmount;
+
+        if (table.currentOrder.discountType === "percentage") {
+          let forDiscount =
+            (table.currentOrder.subTotal *
+              table?.currentOrder?.discountAmount) /
+            100;
+          table.currentOrder.discount = forDiscount;
+          table.currentOrder.subTotal =
+            table.currentOrder.subTotal - forDiscount;
+        }
 
         //this is for service charges
         if (table.tableType === "dine-in") {
@@ -522,6 +533,14 @@ const forAddKotToOrder = async (req, res) => {
         (table.currentOrder.subTotal || 0) + totalAmount;
       table.currentOrder.foodAmount =
         (table.currentOrder.foodAmount || 0) + totalAmount;
+
+      if (table.currentOrder.discountType === "percentage") {
+        let forDiscount =
+          (table.currentOrder.subTotal * table?.currentOrder?.discountAmount) /
+          100;
+        table.currentOrder.discount = forDiscount;
+        table.currentOrder.subTotal = table.currentOrder.subTotal - forDiscount;
+      }
 
       const newKOT = new kots({
         order: { id: table.currentOrder.id },
@@ -807,28 +826,66 @@ const forDiscount = async (req, res) => {
 
   try {
     let forDiscount = 0;
-
+    table.currentOrder.discountAmount = discount;
     if (table.currentOrder.discount === 0) {
       table.currentOrder.discountType = discountType;
       if (discountType === "number") {
         table.currentOrder.discount = discount;
-        table.currentOrder.subTotal = table.currentOrder.subTotal - discount;
-      } else {
-        forDiscount = (table.currentOrder.subTotal * discount) / 100;
-        table.currentOrder.discount = forDiscount;
-        table.currentOrder.subTotal = table.currentOrder.subTotal - forDiscount;
+        if (table.currentOrder.subTotal > discount) {
+          table.currentOrder.subTotal = table.currentOrder.subTotal - discount;
+        } else {
+          res
+            .status(400)
+            .json({ msg: "Please Enter Discount Less than total amount" });
+          return;
+        }
+      } else if (discountType === "percentage") {
+        if (discount < 0 || discount > 100) {
+          res.status(400).json({
+            msg: "Please Enter Discount Percentage between 0 to 100 ",
+          });
+          return;
+        } else {
+          forDiscount = (table.currentOrder.subTotal * discount) / 100;
+          table.currentOrder.discount = forDiscount;
+          table.currentOrder.subTotal =
+            table.currentOrder.subTotal - forDiscount;
+        }
       }
     } else {
-      table.currentOrder.subTotal =
-        table.currentOrder.subTotal + table.currentOrder.discount;
-      table.currentOrder.discountType = discountType;
-      if (discountType === "number") {
-        table.currentOrder.discount = discount;
-        table.currentOrder.subTotal = table.currentOrder.subTotal - discount;
+      if (table.currentOrder.subTotal > discount) {
+        table.currentOrder.subTotal =
+          table.currentOrder.subTotal + table.currentOrder.discount;
+        table.currentOrder.discountType = discountType;
       } else {
-        forDiscount = (table.currentOrder.subTotal * discount) / 100;
-        table.currentOrder.discount = forDiscount;
-        table.currentOrder.subTotal = table.currentOrder.subTotal - forDiscount;
+        res.status(400).json({
+          msg: "Please Enter Discount Amount Less Than Total Amount",
+        });
+        return;
+      }
+
+      if (discountType === "number") {
+        if (table.currentOrder.subTotal > discount) {
+          table.currentOrder.discount = discount;
+          table.currentOrder.subTotal = table.currentOrder.subTotal - discount;
+        } else {
+          res.status(400).json({
+            msg: "Please Enter Discount Amount Less Than Total Amount",
+          });
+          return;
+        }
+      } else if (discountType === "percentage") {
+        if (discount < 0 || discount > 100) {
+          res.status(400).json({
+            msg: "Please Enter Discount Percentage between 0 to 100 ",
+          });
+          return;
+        } else {
+          forDiscount = (table.currentOrder.subTotal * discount) / 100;
+          table.currentOrder.discount = forDiscount;
+          table.currentOrder.subTotal =
+            table.currentOrder.subTotal - forDiscount;
+        }
       }
     }
 
@@ -1647,11 +1704,19 @@ const forVoidAndAddKotItems = async (req, res) => {
     table.currentOrder.subTotal = totalAmount || 0;
     table.currentOrder.foodAmount = totalAmount || 0;
 
-    const discount = table.currentOrder.discount || 0;
+    if (table.currentOrder.discountType === "percentage") {
+      let forDiscount =
+        (table.currentOrder.subTotal * table?.currentOrder?.discountAmount) /
+        100;
+      table.currentOrder.discount = forDiscount;
+      table.currentOrder.subTotal = table.currentOrder.subTotal - forDiscount;
+    } else {
+      table.currentOrder.discount = 0;
+    }
+
     const parcel = table.currentOrder.parcel || 0;
 
-    table.currentOrder.subTotal =
-      table.currentOrder.subTotal - discount + parcel;
+    table.currentOrder.subTotal = table.currentOrder.subTotal + parcel;
 
     if (table?.tableType === "dine-in") {
       if (table.currentOrder.isServiceCharges !== "no") {
@@ -1840,20 +1905,15 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
       targetTable.currentOrder.totalAmount;
     await targetTable.save();
 
-    // Add KOT to the target table's current order
     targetTable.currentOrder.kots.push(newKOT._id);
     await targetTable.save();
 
-    // ---- Now removing transferred items from the KOT in the previous table ----
-    // Identify the transferred items by their IDs in the current KOT
-    const itemsToRemove = orderItems.map((item) => item.id); // Extract item IDs
+    const itemsToRemove = orderItems.map((item) => item.id);
 
-    // Filter out the items in the previous KOT
     kotData.orderItems = kotData.orderItems.filter(
       (item) => !itemsToRemove.includes(item._id.toString())
     );
 
-    // Recalculate the total amount for the previous KOT after removing items
     kotData.totalAmount = kotData.orderItems.reduce(
       (acc, item) => acc + item.totalPrice,
       0
@@ -1862,7 +1922,6 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
     // Save the updated KOT
     await kotData.save();
 
-    // ---- Now updating the previous table's currentOrder totals ----
     const prevTotalAmount = orderItems.reduce(
       (acc, item) => acc + item.totalPrice,
       0
@@ -1871,21 +1930,22 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
     if (!isNaN(prevTotalAmount)) {
       prevTable.currentOrder.subTotal -= prevTotalAmount;
       prevTable.currentOrder.foodAmount -= prevTotalAmount;
+      prevTable.currentOrder.subTotal =
+        prevTable.currentOrder.subTotal + prevTable.currentOrder.discount;
     }
 
-    // Update service charges and GST for the previous table after removal
     if (restData?.typeOfServiceCharges === "percentage") {
-      prevTable.currentOrder.serviceCharges -=
-        (prevTotalAmount * restData.serviceChargesAmount) / 100;
+      prevTable.currentOrder.serviceCharges =
+        (prevTable.currentOrder.subTotal * restData.serviceChargesAmount) / 100;
     } else if (restData.typeOfServiceCharges === "number") {
-      prevTable.currentOrder.serviceCharges -= restData.serviceChargesAmount;
+      prevTable.currentOrder.serviceCharges = restData.serviceChargesAmount;
     }
 
     if (restData.gstTexType === "percentage") {
-      prevTable.currentOrder.gstTex -=
-        (prevTotalAmount * restData.gstTexAmount) / 100;
+      prevTable.currentOrder.gstTex =
+        (prevTable.currentOrder.subTotal * restData.gstTexAmount) / 100;
     } else if (restData.gstTexType === "number") {
-      prevTable.currentOrder.gstTex -= restData.gstTexAmount;
+      prevTable.currentOrder.gstTex = restData.gstTexAmount;
     }
 
     // Recalculate the total amount for the previous table after item removal
@@ -1894,6 +1954,16 @@ const forTransfarKotOrItemsToTable = async (req, res) => {
       prevTable.currentOrder.serviceCharges +
       prevTable.currentOrder.gstTex;
     prevTable.currentOrder.remainAmount = prevTable.currentOrder.totalAmount;
+
+    if (prevTable.currentOrder.discountType === "percentage") {
+      let forDiscount =
+        (prevTable.currentOrder.subTotal *
+          prevTable?.currentOrder?.discountAmount) /
+        100;
+      prevTable.currentOrder.discount = forDiscount;
+      prevTable.currentOrder.subTotal =
+        prevTable.currentOrder.subTotal - forDiscount;
+    }
 
     await prevTable.save();
 
@@ -2129,7 +2199,7 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
 
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await orders.deleteMany();
+  // const allDeletedOrders = await guests.deleteMany();
   res.send({ msg: "all order deleted successfully" });
 };
 

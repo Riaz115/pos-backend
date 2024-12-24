@@ -137,11 +137,11 @@ RestRouter.route("/foradd/:id/combo").post(
 );
 
 RestRouter.route("/foradd/:id/guest").post(controllers.addRestGuest);
-RestRouter.route("/forpay/singlecreditorder/:orderid/guest/:guestid").post(
-  userAuth,
-  controllers.forPayGuestSingleCreditOrder
-);
-RestRouter.route("/forpay/multiorder/credit/:guestid/guest/").post(
+RestRouter.route(
+  "/forpay/singlecreditorder/:orderid/guest/:guestid/:dayid/day"
+).post(userAuth, controllers.forPayGuestSingleCreditOrder);
+
+RestRouter.route("/forpay/multiorder/credit/:guestid/guest/:dayid/day").post(
   userAuth,
   controllers.forPayGuestAllCreditOrders
 );

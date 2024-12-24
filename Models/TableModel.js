@@ -99,7 +99,9 @@ const TableSchema = new mongoose.Schema(
       credit: {
         type: Number,
       },
-
+      discountAmount: {
+        type: Number,
+      },
       discount: {
         type: Number,
       },

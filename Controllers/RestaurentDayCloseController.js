@@ -11,19 +11,38 @@ const forStartDayOfRestaurent = async (req, res) => {
   const { restOpeningAmount } = req.body;
 
   try {
-    const restaurent = {
-      id: restData._id,
-      name: restData.restName,
-    };
-    const startDay = new DaysCloseAndOpen({
-      startDateTime: new Date().toISOString(),
-      restaurant: restaurent,
-      openingAmount: restOpeningAmount,
+    const existingDay = await DaysCloseAndOpen.findOne({
+      "restaurant.id": id,
+      isClosed: false,
     });
 
-    await startDay.save();
-    console.log("start day data", startDay);
-    res.status(201).json({ msg: "Day Started Successfully", startDay });
+    if (existingDay) {
+      res.status(400).json({ msg: "Rest Is Alread Opend " });
+    } else {
+      const restaurent = {
+        id: restData._id,
+        name: restData.restName,
+      };
+      const startDay = new DaysCloseAndOpen({
+        startDateTime: new Date().toISOString(),
+        restaurant: restaurent,
+        openingAmount: restOpeningAmount,
+      });
+
+      await startDay.save();
+      res.status(201).json({ msg: "Day Started Successfully", startDay });
+    }
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for  getting day data
+const forGettingRestRunningDayData = async (req, res) => {
+  const { restid, dayid } = req.params;
+  const runningDay = await DaysCloseAndOpen.findOne({ _id: dayid });
+  try {
+    res.status(200).json({ runningDay });
   } catch (err) {
     res.status(500).json({ msg: "Server Error", err });
   }
@@ -217,9 +236,14 @@ const forAddTransitionToCashBook = async (req, res) => {
     let dayId;
     if (!openDay) {
       res.status(400).json({ msg: "Please open the restaurent" });
+      return;
     } else {
       dayId = openDay._id;
     }
+
+    let forRestData = {
+      id: id,
+    };
 
     const forCreatedData = {
       id: req.user._id,
@@ -227,6 +251,7 @@ const forAddTransitionToCashBook = async (req, res) => {
     };
 
     const newTransitionToCashBook = new ExpensesModel({
+      restaurant: forRestData,
       dayId,
       headAcount,
       accountName,
@@ -240,16 +265,20 @@ const forAddTransitionToCashBook = async (req, res) => {
 
     const forExpenseOfDayModel = {
       id: newTransitionToCashBook._id,
+      headAcount,
+      accountName,
+      exprensType,
+      paymentType,
+      description,
       amount,
       createdBy: forCreatedData,
       votureNo: votureNumber,
-      description,
     };
 
     openDay.expenses.push(forExpenseOfDayModel);
     await openDay.save();
     await newTransitionToCashBook.save();
-    console.log("transition", newTransitionToCashBook);
+
     res
       .status(201)
       .json({ msg: "Transition added Successfully", newTransitionToCashBook });
@@ -265,12 +294,104 @@ const forGettingAllTransitionOfCashBookOfRestaurent = async (req, res) => {
   try {
     const allExpensesOfRest = await ExpensesModel.find({
       "restaurant.id": id,
-    }).sort({ createdAt: -1 }); // Sorting by createdAt in descending order
-
-    console.log("all expenses of the rest", allExpensesOfRest);
+    }).sort({ createdAt: -1 });
 
     res.status(200).json(allExpensesOfRest);
   } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for get data for  edit the transition in running day
+const forGettingDataForEditTheTransitionToCashBook = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const transitionData = await ExpensesModel.findById(id);
+    res.status(200).json(transitionData);
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for edit the transition in the running day
+const forEditTheTransitionInRunningDay = async (req, res) => {
+  const { id, restid } = req.params;
+  const expenseData = await ExpensesModel.findById(id);
+  const restData = await restaurentModel.findById(restid);
+  const {
+    headAcount,
+    accountName,
+    exprensType,
+    paymentType,
+    description,
+    amount,
+  } = req.body;
+
+  try {
+    const openDay = await DaysCloseAndOpen.findOne({
+      "restaurant.id": restid,
+      isClosed: false,
+    });
+
+    const forCreatedData = {
+      id: req.user._id,
+      name: req.user.name,
+    };
+
+    if (openDay._id.toString() !== expenseData.dayId.toString()) {
+      return res.status(400).json({
+        msg: "You cannot edit the transaction for a closed day.",
+      });
+    } else {
+      (expenseData.headAcount = headAcount),
+        (expenseData.accountName = accountName),
+        (expenseData.exprensType = exprensType),
+        (expenseData.paymentType = paymentType),
+        (expenseData.description = description),
+        (expenseData.amount = amount);
+      expenseData.createdBy = forCreatedData;
+
+      const dayExpenseData = openDay.expenses.find(
+        (item) => item.id && item.id.toString() === id
+      );
+
+      if (dayExpenseData) {
+        (dayExpenseData.headAcount = headAcount),
+          (dayExpenseData.accountName = accountName),
+          (dayExpenseData.exprensType = exprensType),
+          (dayExpenseData.paymentType = paymentType),
+          (dayExpenseData.description = description),
+          (dayExpenseData.amount = amount);
+        expenseData.createdBy = forCreatedData;
+      }
+
+      await openDay.save();
+      await expenseData.save();
+
+      res.status(200).json({ msg: "Transition Updated sucessfully" });
+    }
+  } catch (err) {
+    console.log("err ", err);
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for delete the transition from the cash book
+const forDeletExpenseTranstion = async (req, res) => {
+  const { id, dayid } = req.params;
+
+  try {
+    const forDeleteExpense = await ExpensesModel.findByIdAndDelete(id);
+    const result = await DaysCloseAndOpen.updateOne(
+      { _id: dayid },
+      { $pull: { expenses: { id: id } } }
+    );
+
+    res
+      .status(200)
+      .json({ msg: "Expense Deleted Successfully", forDeleteExpense });
+  } catch (err) {
+    console.log("err", err);
     res.status(500).json({ msg: "Server Error", err });
   }
 };
@@ -291,4 +412,8 @@ module.exports = {
   forDeleteAccName,
   forAddTransitionToCashBook,
   forGettingAllTransitionOfCashBookOfRestaurent,
+  forGettingDataForEditTheTransitionToCashBook,
+  forEditTheTransitionInRunningDay,
+  forDeletExpenseTranstion,
+  forGettingRestRunningDayData,
 };

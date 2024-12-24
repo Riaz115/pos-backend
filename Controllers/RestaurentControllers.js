@@ -4,6 +4,7 @@ const Restaurant = require("../Models/RestaurentModel");
 const Counter = require("../Models/CounterModel");
 const Guests = require("../Models/RestGuestsModel");
 const Orders = require("../Models/OrderSchema");
+const dayCloseAndOpenModal = require("../Models/DayStartAndCloseModel");
 
 //this is for images url
 const imageUrl = "http://localhost:8000/restImages/";
@@ -460,10 +461,12 @@ const forGettingGuestCreditSingleOrderData = async (req, res) => {
 
 //this is for pay total credit of the single invoice of guest
 const forPayGuestSingleCreditOrder = async (req, res) => {
-  const { orderid, guestid } = req.params;
+  const { orderid, guestid, dayid } = req.params;
   const { amount, paymentMethod, detail } = req.body;
   const guestData = await Guests.findById(guestid);
   const orderData = await Orders.findById(orderid);
+  const runningDay = await dayCloseAndOpenModal.findById(dayid);
+
   try {
     const invoiceData = guestData.creditOrdersDetail.find(
       (item) => item.orderid === orderid
@@ -487,7 +490,10 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
         invoiceData.creditAmount > parseFloat(amount)
           ? parseFloat(amount)
           : invoiceData.creditAmount,
-      remainCreditAmount: invoiceData?.creditAmount,
+      remainCreditAmount:
+        invoiceData.creditAmount > parseFloat(amount)
+          ? 0
+          : invoiceData.creditAmount,
     });
 
     //this is for add payment method
@@ -500,6 +506,21 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
       payDetail: detail,
     });
 
+    //this is for add to running day recoveredCredit
+    runningDay.recoveredCredit.push({
+      amount:
+        invoiceData?.creditAmount > parseFloat(amount)
+          ? parseFloat(amount)
+          : invoiceData?.creditAmount,
+      paymentMeth: paymentMethod,
+    });
+
+    //this is for add credit recover to running day
+    runningDay.creditRecovered =
+      invoiceData.creditAmount > parseFloat(amount)
+        ? runningDay.creditRecovered + parseFloat(amount)
+        : runningDay.creditRecovered + invoiceData.creditAmount;
+
     //this is for minus from guest total amount
     if (invoiceData?.creditAmount > 0) {
       if (invoiceData?.creditAmount > amount) {
@@ -508,17 +529,26 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
         invoiceData.paidAmount =
           (invoiceData?.paidAmount || 0) + parseFloat(amount);
 
-        orderData.guest.credit =
-          (orderData?.guest?.credit || 0) - parseFloat(amount);
-        orderData.credit = (orderData?.credit || 0) - parseFloat(amount);
+        if (orderData && orderData.guest) {
+          orderData.guest.credit =
+            (orderData?.guest?.credit || 0) - parseFloat(amount);
+          orderData.credit = (orderData?.credit || 0) - parseFloat(amount);
+        }
       } else {
         guestData.totalCredit =
           (guestData?.totalCredit || 0) - invoiceData?.creditAmount;
         invoiceData.paidAmount =
           (invoiceData?.paidAmount || 0) + invoiceData?.creditAmount;
-        orderData.guest.credit =
-          (orderData?.guest?.credit || 0) - invoiceData?.creditAmount;
-        orderData.credit = (orderData?.credit || 0) - invoiceData?.creditAmount;
+
+        if (orderData && orderData.guest) {
+          orderData.guest.credit =
+            (orderData?.guest?.credit || 0) - invoiceData?.creditAmount;
+        }
+
+        if (orderData) {
+          orderData.credit =
+            (orderData?.credit || 0) - invoiceData?.creditAmount;
+        }
       }
     }
 
@@ -529,8 +559,13 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
     //this is for making zero of credit
     if (invoiceData?.creditAmount < 0) {
       invoiceData.creditAmount = 0;
-      orderData.guest.credit = 0;
-      orderData.credit = 0;
+
+      if (orderData && orderData.guest) {
+        orderData.guest.credit = 0;
+      }
+      if (orderData) {
+        orderData.credit = 0;
+      }
       invoiceData.orderDate = Date.now();
     }
 
@@ -538,10 +573,17 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
     guestData.guestCreditPaidAmounts.push(creditPaidRecord);
 
     await guestData.save();
-    await orderData.save();
+    await runningDay.save();
+
+    console.log("day", runningDay.creditRecovered);
+
+    if (orderData) {
+      await orderData.save();
+    }
 
     res.status(200).json({ invoiceData, guestData });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ msg: "Server Error", err });
   }
 };
@@ -586,12 +628,12 @@ const forDeleteCounter = async (req, res) => {
 
 //this is for pay multiple invoices order data
 const forPayGuestAllCreditOrders = async (req, res) => {
-  const { guestid } = req.params;
+  const { guestid, dayid } = req.params;
   const { amount, paymentMethod, detail } = req.body;
+  const runningDay = await dayCloseAndOpenModal.findById(dayid);
+  const guestData = await Guests.findById(guestid);
 
   try {
-    const guestData = await Guests.findById(guestid);
-
     let remainingAmount = parseFloat(amount);
 
     const creditPaidRecord = {
@@ -602,6 +644,21 @@ const forPayGuestAllCreditOrders = async (req, res) => {
       amountUseData: [],
       paymentType: paymentMethod,
     };
+
+    //this is for add credit recover to running day
+    runningDay.creditRecovered =
+      guestData.totalCredit > parseFloat(amount)
+        ? runningDay.creditRecovered + parseFloat(amount)
+        : runningDay.creditRecovered + guestData.totalCredit;
+
+    //this is for add to the recover credit array
+    runningDay.recoveredCredit.push({
+      amount:
+        guestData.totalCredit > parseFloat(amount)
+          ? parseFloat(amount)
+          : guestData.totalCredit,
+      paymentMeth: paymentMethod,
+    });
 
     // Sort credit orders by orderDate (oldest first)
     const sortedOrders = guestData.creditOrdersDetail.sort(
@@ -650,6 +707,9 @@ const forPayGuestAllCreditOrders = async (req, res) => {
     }
     guestData.guestCreditPaidAmounts.push(creditPaidRecord);
     await guestData.save();
+    await runningDay.save();
+
+    console.log("day", runningDay.creditRecovered);
 
     res.status(200).json({
       msg: "Payment paid successfully",

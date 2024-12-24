@@ -26,9 +26,7 @@ const daySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "AllExpensesOfRestaurent",
       },
-      votureNo: { type: Number, required: true },
-      amount: { type: Number },
-      exprensType: { type: String, enum: ["paid", "received"] },
+      votureNo: { type: Number },
       createdBy: {
         id: {
           type: String,
@@ -37,11 +35,19 @@ const daySchema = new mongoose.Schema({
           type: String,
         },
       },
+      amount: { type: Number },
+      exprensType: { type: String, enum: ["paid", "received"] },
+      accountName: { type: String },
+      headAcount: { type: String },
       description: { type: String },
+      paymentType: { type: String },
       dateAndTime: { type: Date, default: Date.now },
     },
   ],
   creditGiven: { type: Number, default: 0 },
+  recoveredCredit: [
+    { amount: { type: Number }, paymentMeth: { type: String } },
+  ],
   creditRecovered: { type: Number, default: 0 },
   isClosed: { type: Boolean, default: false },
 });
