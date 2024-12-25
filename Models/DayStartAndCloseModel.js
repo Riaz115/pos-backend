@@ -14,12 +14,13 @@ const daySchema = new mongoose.Schema({
   endDateTime: { type: Date },
   openingAmount: { type: Number, required: true },
   totalSales: { type: Number, default: 0 },
-  cashPayments: { type: Number, default: 0 },
-  cardPayments: { type: Number, default: 0 },
-  creditPayments: { type: Number, default: 0 },
+  paymentMethodsWithTotalAmount: [
+    { method: { type: String }, amount: { type: Number } },
+  ],
   noChargeAmount: { type: Number, default: 0 },
   discounts: { type: Number, default: 0 },
   parcelCharges: { type: Number, default: 0 },
+  totalRemainSale: { type: Number, default: 0 },
   expenses: [
     {
       id: {
@@ -44,6 +45,7 @@ const daySchema = new mongoose.Schema({
       dateAndTime: { type: Date, default: Date.now },
     },
   ],
+  totalGivenExpense: { type: String, defualt: 0 },
   creditGiven: { type: Number, default: 0 },
   recoveredCredit: [
     { amount: { type: Number }, paymentMeth: { type: String } },

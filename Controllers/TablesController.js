@@ -2199,7 +2199,7 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
 
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await guests.deleteMany();
+  // const allDeletedOrders = await orders.deleteMany();
   res.send({ msg: "all order deleted successfully" });
 };
 

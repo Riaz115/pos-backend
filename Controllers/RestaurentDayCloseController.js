@@ -3,6 +3,7 @@ const restaurentModel = require("../Models/RestaurentModel");
 const ExpensesModel = require("../Models/ExpensesModel");
 const AcountsHeadsModel = require("../Models/CashBookAcountHead");
 const AccountNameModel = require("../Models/CashBookAcountName");
+const restModel = require("../Models/RestaurentModel");
 
 //this is for start day of the restarent and open the restauren
 const forStartDayOfRestaurent = async (req, res) => {
@@ -50,7 +51,36 @@ const forGettingRestRunningDayData = async (req, res) => {
 
 //this is for close the day of the restaurent
 const forCloseTheDayOfRestaurent = async (req, res) => {
-  console.log("this is for testing");
+  const { restid, dayid } = req.params;
+  const runningDayData = await DaysCloseAndOpen.findOne({ _id: dayid });
+  const {
+    paymentMethodsWithTotalAmount,
+    noChargeAmount,
+    discounts,
+    parcelCharges,
+    creditGiven,
+    creditRecovered,
+    totalGivenExpense,
+    totalRemainSale,
+    totalSales,
+  } = req.body;
+
+  console.log(req.body);
+  const restData = await restModel.findById(restid);
+  try {
+    if (
+      restData._id === runningDayData.restaurant.id &&
+      !runningDayData.isClosed === false
+    ) {
+      res.status(400).json({
+        msg: "Restaurent is already Closed Please Open the restaurent Before the Close",
+      });
+    } else {
+      res.status(200).json({ msg: "Testing success" });
+    }
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
 };
 
 //this is for add account head of restaurent

@@ -492,8 +492,8 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
           : invoiceData.creditAmount,
       remainCreditAmount:
         invoiceData.creditAmount > parseFloat(amount)
-          ? 0
-          : invoiceData.creditAmount,
+          ? invoiceData.creditAmount
+          : 0,
     });
 
     //this is for add payment method
@@ -532,7 +532,7 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
         if (orderData && orderData.guest) {
           orderData.guest.credit =
             (orderData?.guest?.credit || 0) - parseFloat(amount);
-          orderData.credit = (orderData?.credit || 0) - parseFloat(amount);
+          // orderData.credit = (orderData?.credit || 0) - parseFloat(amount);
         }
       } else {
         guestData.totalCredit =
@@ -545,10 +545,10 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
             (orderData?.guest?.credit || 0) - invoiceData?.creditAmount;
         }
 
-        if (orderData) {
-          orderData.credit =
-            (orderData?.credit || 0) - invoiceData?.creditAmount;
-        }
+        // if (orderData) {
+        //   orderData.credit =
+        //     (orderData?.credit || 0) - invoiceData?.creditAmount;
+        // }
       }
     }
 
@@ -563,9 +563,9 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
       if (orderData && orderData.guest) {
         orderData.guest.credit = 0;
       }
-      if (orderData) {
-        orderData.credit = 0;
-      }
+      // if (orderData) {
+      //   orderData.credit = 0;
+      // }
       invoiceData.orderDate = Date.now();
     }
 
@@ -574,8 +574,6 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
 
     await guestData.save();
     await runningDay.save();
-
-    console.log("day", runningDay.creditRecovered);
 
     if (orderData) {
       await orderData.save();

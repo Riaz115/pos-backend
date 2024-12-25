@@ -41,7 +41,7 @@ daysRouter
   .post(userAuth, controllers.forStartDayOfRestaurent);
 
 daysRouter
-  .route("/restaurent/:id/close/day/off")
+  .route("/restaurent/:restid/close/day/:dayid/off")
   .post(userAuth, controllers.forCloseTheDayOfRestaurent);
 
 daysRouter
