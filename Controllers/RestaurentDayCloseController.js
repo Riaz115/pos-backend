@@ -52,34 +52,69 @@ const forGettingRestRunningDayData = async (req, res) => {
 //this is for close the day of the restaurent
 const forCloseTheDayOfRestaurent = async (req, res) => {
   const { restid, dayid } = req.params;
-  const runningDayData = await DaysCloseAndOpen.findOne({ _id: dayid });
-  const {
-    paymentMethodsWithTotalAmount,
-    noChargeAmount,
-    discounts,
-    parcelCharges,
-    creditGiven,
-    creditRecovered,
-    totalGivenExpense,
-    totalRemainSale,
-    totalSales,
-  } = req.body;
 
-  console.log(req.body);
-  const restData = await restModel.findById(restid);
   try {
-    if (
-      restData._id === runningDayData.restaurant.id &&
-      !runningDayData.isClosed === false
-    ) {
-      res.status(400).json({
-        msg: "Restaurent is already Closed Please Open the restaurent Before the Close",
-      });
-    } else {
-      res.status(200).json({ msg: "Testing success" });
+    // Fetch the running day data
+    const runningDayData = await DaysCloseAndOpen.findOne({ _id: dayid });
+    if (!runningDayData) {
+      return res.status(404).json({ msg: "Day data not found" });
     }
+
+    // Fetch the restaurant data
+    const restData = await restModel.findById(restid);
+    if (!restData) {
+      return res.status(404).json({ msg: "Restaurant not found" });
+    }
+
+    // Check if the restaurant ID matches and the day is already closed
+    if (String(runningDayData.restaurant.id) !== String(restData._id)) {
+      return res.status(400).json({
+        msg: "The provided restaurant does not match the day record.",
+      });
+    }
+
+    if (runningDayData.isClosed === true) {
+      return res.status(400).json({
+        msg: "The day is already closed. Please open the restaurant before closing it again.",
+      });
+    }
+
+    // Extract data from req.body and set default values
+    const {
+      paymentMethodsWithTotalAmount = [],
+      noChargeAmount = 0,
+      discounts = 0,
+      parcelCharges = 0,
+      creditGiven = 0,
+      totalGivenExpense = 0,
+      totalRemainSale = 0,
+      totalSales = 0,
+    } = req.body;
+
+    // Update the running day's data
+    runningDayData.paymentMethodsWithTotalAmount =
+      paymentMethodsWithTotalAmount;
+    runningDayData.noChargeAmount = noChargeAmount;
+    runningDayData.discounts = discounts;
+    runningDayData.parcelCharges = parcelCharges;
+    runningDayData.creditGiven = creditGiven;
+    runningDayData.totalGivenExpense = totalGivenExpense;
+    runningDayData.totalRemainSale = totalRemainSale;
+    runningDayData.totalSales = totalSales;
+    runningDayData.endDateTime = new Date();
+    runningDayData.isClosed = true;
+
+    // Save the updated day data
+    await runningDayData.save();
+
+    // Send success response
+    return res.status(200).json({
+      msg: "Day closed successfully",
+      data: runningDayData,
+    });
   } catch (err) {
-    res.status(500).json({ msg: "Server Error", err });
+    console.log(err);
+    return res.status(500).json({ msg: "Server Error", error: err.message });
   }
 };
 
