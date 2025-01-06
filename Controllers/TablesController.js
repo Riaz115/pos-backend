@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require("uuid");
 const guests = require("../Models/RestGuestsModel");
 const daysModel = require("../Models/DayStartAndCloseModel");
 const allExpenses = require("../Models/ExpensesModel");
+const allMenuItems = require("../Models/MenuItemModel");
 
 //this is for add tables
 const forAddTables = async (req, res) => {
@@ -2199,8 +2200,12 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
 
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
-  // const allDeletedOrders = await orders.deleteMany();
-  res.send({ msg: "all order deleted successfully" });
+  try {
+    const allDeletedOrders = await allMenuItems.deleteMany();
+    res.send({ msg: "all order deleted successfully" });
+  } catch (err) {
+    console.log("there is err", err);
+  }
 };
 
 //exporting

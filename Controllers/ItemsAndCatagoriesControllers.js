@@ -23,17 +23,13 @@ const forGetallCatagories = async (req, res) => {
 //this is for get all items of the restauretn
 const forGetAllMenuItems = async (req, res) => {
   const id = req.params.id.trim();
-  const restMenuItems = await menuItems.find({
-    "restaurent.id": id,
-  });
+  const restMenuItems = await menuItems
+    .find({
+      "restaurent.id": id,
+    })
+    .sort({ createdAt: -1 });
 
   try {
-    if (!restMenuItems || restMenuItems.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No Items found for this Restaurent." });
-    }
-
     // Update the image URL for each restaurant
     const allItems = restMenuItems.map((item) => {
       if (item.image) {
@@ -111,24 +107,31 @@ const forAddCatagory = async (req, res) => {
 
 //this is for add menu item
 const forAddMenuItem = async (req, res) => {
-  const id = req.params.id;
-  const { name, price, catagory, desc, qty } = req.body;
-  const itemImage = req.file ? req.file.filename : "";
-
-  const myRestaurent = await Restaurant.findById(id);
-  let restaurent = {
-    id: myRestaurent._id,
-  };
-
   try {
+    const id = req.params.id;
+    const { name, price, catagory, desc, stockItems } = req.body;
+    const itemImage = req.file ? req.file.filename : "";
+
+    const parsedStockItems = JSON.parse(stockItems);
+
+    const myRestaurent = await Restaurant.findById(id);
+    let restaurent = {
+      id: myRestaurent._id,
+    };
+
+    const forStockItems = parsedStockItems.map((item) => ({
+      id: item.id,
+      qty: item.qty,
+      qtyType: item.qtyType,
+    }));
+
     const newMenuItem = new menuItems({
       restaurent: restaurent,
       name,
       price,
       catagory,
       desc,
-      qty,
-
+      stockItems: forStockItems,
       image: itemImage,
     });
 
@@ -170,36 +173,43 @@ const forUpdateCatagory = async (req, res) => {
 
 //this is for update the itme
 const forUpdateMenuItem = async (req, res) => {
-  const id = req.params.id;
-  const { name, price, desc, catagory, qty } = req.body;
-  const updatedItem = {
-    name,
-    price,
-    desc,
-    catagory,
-    qty,
-  };
-  if (req.file) {
-    updatedItem.image = req.file.filename;
-    const existingItem = await menuItems.findById(id);
-
-    const existImage = path.join(
-      __dirname,
-      "..",
-      "menuItemImages",
-      existingItem.image
-    );
-
-    fs.unlink(existImage, (err) => {
-      if (err) {
-        console.log("there is error in  delete image", err);
-      } else {
-        console.log("image deleted successfully");
-      }
-    });
-  }
-
   try {
+    const id = req.params.id;
+    const { name, price, desc, catagory, stockItems } = req.body;
+
+    const parsedStockItems = JSON.parse(stockItems);
+    const forStockItems = parsedStockItems.map((item) => ({
+      id: item.id,
+      qty: item.qty,
+      qtyType: item.qtyType,
+    }));
+
+    const updatedItem = {
+      name,
+      price,
+      desc,
+      catagory,
+      stockItems: forStockItems,
+    };
+    if (req.file) {
+      updatedItem.image = req.file.filename;
+      const existingItem = await menuItems.findById(id);
+
+      const existImage = path.join(
+        __dirname,
+        "..",
+        "menuItemImages",
+        existingItem.image
+      );
+
+      fs.unlink(existImage, (err) => {
+        if (err) {
+          console.log("there is error in  delete image", err);
+        } else {
+          console.log("image deleted successfully");
+        }
+      });
+    }
     const newItem = await menuItems.findByIdAndUpdate(id, updatedItem);
 
     res.status(200).json({ msg: "user Updated Successfully", newItem });
@@ -264,7 +274,6 @@ const forCreateComboItem = async (req, res) => {
     };
 
     const itemImage = req.file ? req.file.filename : "";
-
     const forItems = await menuItems.find({ _id: { $in: items } });
     const comboItems = forItems.map((item) => {
       const quantity = req.body.quantities[item._id];

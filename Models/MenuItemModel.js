@@ -17,10 +17,6 @@ const MenuItemSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    qty: {
-      type: Number,
-      required: true,
-    },
 
     catagory: {
       type: String,
@@ -31,6 +27,24 @@ const MenuItemSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+
+    stockItems: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "StockItem",
+          required: true,
+        },
+        qty: {
+          type: Number,
+          required: true,
+        },
+        qtyType: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
 
     image: {
       type: String,

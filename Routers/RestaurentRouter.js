@@ -182,6 +182,7 @@ RestRouter.route("/delete/:id/menuitem").delete(
 RestRouter.route("/delete/:id/comboitem").delete(
   newController.forDeleteComboItem
 );
+
 RestRouter.route("/delete/:id/guest").delete(controllers.forDeleteGuest);
 RestRouter.route("/delete/:id/counter").delete(controllers.forDeleteCounter);
 RestRouter.route("/delete/:id/restaurent").delete(

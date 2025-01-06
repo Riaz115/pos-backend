@@ -6,6 +6,7 @@ const restRouter = require("./Routers/RestaurentRouter");
 const counterUser = require("./Routers/CounterUserRouter");
 const tableRouter = require("./Routers/TableRouter");
 const daysRouter = require("./Routers/DayCloseOpenRouter");
+const stockRouter = require("./Routers/StockItemRouter");
 const DbConn = require("./DB/DBConn");
 const cors = require("cors");
 
@@ -33,6 +34,7 @@ app.use("/api", restRouter);
 app.use("/api", counterUser);
 app.use("/api", tableRouter);
 app.use("/api", daysRouter);
+app.use("/api", stockRouter);
 
 //listening the app
 DbConn()

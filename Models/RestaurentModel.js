@@ -89,9 +89,9 @@ const restaurantSchema = new mongoose.Schema(
         },
       },
     ],
-    stockCatagories: [
+    stockItems: [
       {
-        id: { type: mongoose.Schema.Types.ObjectId, ref: "StockCatagory" },
+        id: { type: mongoose.Schema.Types.ObjectId, ref: "StockItem" },
       },
     ],
   },
