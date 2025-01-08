@@ -36,6 +36,8 @@ const restaurantSchema = new mongoose.Schema(
     deliveryChargesAmount: { type: Number, required: true },
     gstTexType: { type: String, required: true },
     gstTexAmount: { type: Number, required: true },
+    overSelling: { type: String, required: true },
+    stockManage: { type: String, required: true },
 
     date: {
       type: Date,

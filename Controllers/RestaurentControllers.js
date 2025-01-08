@@ -41,6 +41,8 @@ const forAddRestaurent = async (req, res) => {
     deliveryChargesAmount,
     gstTexType,
     gstTexAmount,
+    stockManage,
+    overSelling,
   } = req.body;
 
   //this is for image
@@ -84,6 +86,8 @@ const forAddRestaurent = async (req, res) => {
       deliveryChargesAmount,
       gstTexType,
       gstTexAmount,
+      stockManage,
+      overSelling,
     });
     const savedRestaurant = await newRestaurant.save();
 
@@ -182,6 +186,8 @@ const forEditResturent = async (req, res) => {
     deliveryChargesAmount,
     gstTexType,
     gstTexAmount,
+    stockManage,
+    overSelling,
   } = req.body;
 
   const updatedRest = {
@@ -214,6 +220,8 @@ const forEditResturent = async (req, res) => {
     deliveryChargesAmount,
     gstTexType,
     gstTexAmount,
+    stockManage,
+    overSelling,
   };
 
   if (req.file) {
@@ -239,7 +247,9 @@ const forEditResturent = async (req, res) => {
   try {
     const newRest = await Restaurant.findByIdAndUpdate(id, updatedRest);
 
-    res.status(200).json({ msg: "user Updated Successfully", newRest });
+    res
+      .status(200)
+      .json({ msg: "Restaurent Setting Updated Successfully", newRest });
   } catch (err) {
     res.status(500).json({ msg: "Server Error" });
     console.log("there is error in update owner user function", err);

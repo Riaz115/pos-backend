@@ -9,6 +9,9 @@ const guests = require("../Models/RestGuestsModel");
 const daysModel = require("../Models/DayStartAndCloseModel");
 const allExpenses = require("../Models/ExpensesModel");
 const allMenuItems = require("../Models/MenuItemModel");
+const allStockItems = require("../Models/StockItemsModal");
+const comboModel = require("../Models/ComboItemModel");
+const voidedItemsModel = require("../Models/VoidedItemsModal");
 
 //this is for add tables
 const forAddTables = async (req, res) => {
@@ -216,6 +219,10 @@ const forAddKotToOrder = async (req, res) => {
   const { orderItems, guestData, paymentMethod, amount, frontEndType, detail } =
     req.body;
 
+  // Fetch all menu items
+  const myAllMenuItems = await allMenuItems.find();
+  const myAllStockItems = await allStockItems.find();
+
   const openDay = await daysModel.findOne({
     "restaurant.id": restId,
     isClosed: false,
@@ -227,12 +234,6 @@ const forAddKotToOrder = async (req, res) => {
   } else {
     dayId = openDay._id;
   }
-
-  orderItems?.map((item) => {
-    item?.items?.map((newitems) => {
-      newitems.qty = newitems.qty * item.quantity;
-    });
-  });
 
   const table = await tables.findById(id).populate({
     path: "Counter.id",
@@ -281,6 +282,148 @@ const forAddKotToOrder = async (req, res) => {
       let totalAmount = 0;
 
       if (orderItems) {
+        //this is for manage stock
+
+        if (restData?.stockManage === "yes") {
+          for (const order of orderItems) {
+            const { items, quantity: orderQuantity } = order;
+
+            if (items && items.length > 0) {
+              for (const subItem of items) {
+                subItem.qty = subItem.qty * orderQuantity;
+
+                const menuItem = myAllMenuItems.find(
+                  (menu) => menu._id.toString() === subItem.id.toString()
+                );
+
+                if (menuItem) {
+                  for (const stockItem of menuItem.stockItems) {
+                    stockItem.qty = stockItem.qty * subItem.qty;
+
+                    const filteredStockItem = myAllStockItems.find(
+                      (stock) =>
+                        stock._id.toString() === stockItem.id.toString()
+                    );
+
+                    if (filteredStockItem) {
+                      if (
+                        filteredStockItem.qtyType.toString() ===
+                        stockItem.qtyType.toString()
+                      ) {
+                        filteredStockItem.stock -= stockItem.qty;
+                      } else if (
+                        filteredStockItem.qtyType === "kilogram" &&
+                        stockItem.qtyType === "gram"
+                      ) {
+                        const withGram =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withGram / 1000;
+                      } else if (
+                        filteredStockItem.qtyType === "kilogram" &&
+                        stockItem.qtyType === "milligram"
+                      ) {
+                        const withMilligram =
+                          filteredStockItem.stock * 1000000 - stockItem.qty;
+                        filteredStockItem.stock = withMilligram / 1000000;
+                      } else if (
+                        filteredStockItem.qtyType === "gram" &&
+                        stockItem.qtyType === "milligram"
+                      ) {
+                        const withMilligram =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withMilligram / 1000;
+                      } else if (
+                        filteredStockItem.qtyType === "liter" &&
+                        stockItem.qtyType === "milliliter"
+                      ) {
+                        const withMilliliter =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withMilliliter / 1000;
+                      }
+
+                      // Save the stock item synchronously
+                      await filteredStockItem.save();
+                    }
+                  }
+                }
+              }
+            } else {
+              const orderedItemsDetails = myAllMenuItems.filter((menu) =>
+                orderItems.some(
+                  (order) => order.id.toString() === menu._id.toString()
+                )
+              );
+
+              for (const item of orderedItemsDetails) {
+                const orderItem = orderItems.find(
+                  (order) => order.id.toString() === item._id.toString()
+                );
+
+                if (orderItem) {
+                  for (const stockItem of item.stockItems) {
+                    stockItem.qty = stockItem.qty * orderItem.quantity;
+
+                    const filteredStockItem = myAllStockItems.find(
+                      (stock) =>
+                        stock._id.toString() === stockItem.id.toString()
+                    );
+
+                    if (filteredStockItem) {
+                      if (
+                        filteredStockItem.qtyType.toString() ===
+                        stockItem.qtyType.toString()
+                      ) {
+                        filteredStockItem.stock -= stockItem.qty;
+                      } else if (
+                        filteredStockItem.qtyType === "kilogram" &&
+                        stockItem.qtyType === "gram"
+                      ) {
+                        const withGram =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withGram / 1000;
+                      } else if (
+                        filteredStockItem.qtyType === "kilogram" &&
+                        stockItem.qtyType === "milligram"
+                      ) {
+                        const withMilligram =
+                          filteredStockItem.stock * 1000000 - stockItem.qty;
+                        filteredStockItem.stock = withMilligram / 1000000;
+                      } else if (
+                        filteredStockItem.qtyType === "gram" &&
+                        stockItem.qtyType === "milligram"
+                      ) {
+                        const withMilligram =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withMilligram / 1000;
+                      } else if (
+                        filteredStockItem.qtyType === "liter" &&
+                        stockItem.qtyType === "milliliter"
+                      ) {
+                        const withMilliliter =
+                          filteredStockItem.stock * 1000 - stockItem.qty;
+                        filteredStockItem.stock = withMilliliter / 1000;
+                      }
+
+                      // Save the stock item synchronously
+                      await filteredStockItem.save();
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          orderItems.map((item) => {
+            if (item.items.length > 0) {
+              item.items.map((dealItem) => {
+                dealItem.qty = dealItem.qty * item.quantity;
+              });
+            }
+          });
+        }
+
+        //this is end of the manage stock
+
         totalAmount = orderItems.reduce(
           (acc, item) => acc + item.totalPrice,
           0
@@ -509,6 +652,144 @@ const forAddKotToOrder = async (req, res) => {
     }
   } else if (restData?.payemtPreOrPost === "post") {
     try {
+      //this is for manage stock
+      if (restData?.stockManage === "yes") {
+        for (const order of orderItems) {
+          const { items, quantity: orderQuantity } = order;
+
+          if (items && items.length > 0) {
+            for (const subItem of items) {
+              subItem.qty = subItem.qty * orderQuantity;
+
+              const menuItem = myAllMenuItems.find(
+                (menu) => menu._id.toString() === subItem.id.toString()
+              );
+
+              if (menuItem) {
+                for (const stockItem of menuItem.stockItems) {
+                  stockItem.qty = stockItem.qty * subItem.qty;
+
+                  const filteredStockItem = myAllStockItems.find(
+                    (stock) => stock._id.toString() === stockItem.id.toString()
+                  );
+
+                  if (filteredStockItem) {
+                    if (
+                      filteredStockItem.qtyType.toString() ===
+                      stockItem.qtyType.toString()
+                    ) {
+                      filteredStockItem.stock -= stockItem.qty;
+                    } else if (
+                      filteredStockItem.qtyType === "kilogram" &&
+                      stockItem.qtyType === "gram"
+                    ) {
+                      const withGram =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withGram / 1000;
+                    } else if (
+                      filteredStockItem.qtyType === "kilogram" &&
+                      stockItem.qtyType === "milligram"
+                    ) {
+                      const withMilligram =
+                        filteredStockItem.stock * 1000000 - stockItem.qty;
+                      filteredStockItem.stock = withMilligram / 1000000;
+                    } else if (
+                      filteredStockItem.qtyType === "gram" &&
+                      stockItem.qtyType === "milligram"
+                    ) {
+                      const withMilligram =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withMilligram / 1000;
+                    } else if (
+                      filteredStockItem.qtyType === "liter" &&
+                      stockItem.qtyType === "milliliter"
+                    ) {
+                      const withMilliliter =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withMilliliter / 1000;
+                    }
+
+                    // Save the stock item synchronously
+                    await filteredStockItem.save();
+                  }
+                }
+              }
+            }
+          } else {
+            const orderedItemsDetails = myAllMenuItems.filter((menu) =>
+              orderItems.some(
+                (order) => order.id.toString() === menu._id.toString()
+              )
+            );
+
+            for (const item of orderedItemsDetails) {
+              const orderItem = orderItems.find(
+                (order) => order.id.toString() === item._id.toString()
+              );
+
+              if (orderItem) {
+                for (const stockItem of item.stockItems) {
+                  stockItem.qty = stockItem.qty * orderItem.quantity;
+
+                  const filteredStockItem = myAllStockItems.find(
+                    (stock) => stock._id.toString() === stockItem.id.toString()
+                  );
+
+                  if (filteredStockItem) {
+                    if (
+                      filteredStockItem.qtyType.toString() ===
+                      stockItem.qtyType.toString()
+                    ) {
+                      filteredStockItem.stock -= stockItem.qty;
+                    } else if (
+                      filteredStockItem.qtyType === "kilogram" &&
+                      stockItem.qtyType === "gram"
+                    ) {
+                      const withGram =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withGram / 1000;
+                    } else if (
+                      filteredStockItem.qtyType === "kilogram" &&
+                      stockItem.qtyType === "milligram"
+                    ) {
+                      const withMilligram =
+                        filteredStockItem.stock * 1000000 - stockItem.qty;
+                      filteredStockItem.stock = withMilligram / 1000000;
+                    } else if (
+                      filteredStockItem.qtyType === "gram" &&
+                      stockItem.qtyType === "milligram"
+                    ) {
+                      const withMilligram =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withMilligram / 1000;
+                    } else if (
+                      filteredStockItem.qtyType === "liter" &&
+                      stockItem.qtyType === "milliliter"
+                    ) {
+                      const withMilliliter =
+                        filteredStockItem.stock * 1000 - stockItem.qty;
+                      filteredStockItem.stock = withMilliliter / 1000;
+                    }
+
+                    // Save the stock item synchronously
+                    await filteredStockItem.save();
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else {
+        orderItems.map((item) => {
+          if (item.items.length > 0) {
+            item.items.map((dealItem) => {
+              dealItem.qty = dealItem.qty * item.quantity;
+            });
+          }
+        });
+      }
+
+      //this is the end of the manage stock function
       let newGuest = {};
       if (guestData) {
         newGuest = {
@@ -615,6 +896,7 @@ const forAddKotToOrder = async (req, res) => {
       await table.save();
       // Add KOT to current order
       table.currentOrder.kots.push(newKOT._id);
+
       await table.save();
       res
         .status(201)
@@ -1652,10 +1934,13 @@ const forGettingKotdataForEdit = async (req, res) => {
   }
 };
 
-//this is for the void and add kot items
+//this is for void item from the kot and order
 const forVoidAndAddKotItems = async (req, res) => {
   const { id, kotid } = req.params;
   const { orderItems } = req.body;
+  const allStockIteminStock = await allStockItems.find();
+  const TotalMenuItems = await allMenuItems.find();
+  const allComboItems = await comboModel.find();
 
   try {
     const kot = await kots.findById(kotid);
@@ -1686,9 +1971,77 @@ const forVoidAndAddKotItems = async (req, res) => {
         ? table?.counterArea?.id?.counter?.id?.restaurent?.id
         : table?.Counter?.id?.restaurent?.id;
 
-    kot.orderItems = orderItems;
-    (kot.totalItem = orderItems.length), await kot.save();
+    const voidedItems = [];
+    const dataForVoidItems = [];
 
+    // Compare frontend items with KOT items
+    kot.orderItems.forEach((kotItem) => {
+      const frontendItem = orderItems.find(
+        (item) => item.id === kotItem.id.toString()
+      );
+
+      if (frontendItem) {
+        const quantityDiff = kotItem.quantity - frontendItem.quantity;
+
+        if (quantityDiff > 0) {
+          voidedItems.push({
+            id: kotItem.id,
+            name: kotItem.name,
+            voidedQuantity: quantityDiff,
+          });
+
+          dataForVoidItems.push({
+            restId: kot?.restaurent?.id,
+            invoiceNumber: kot?.kotOrderNo,
+            counterId: kot?.Counter?.id,
+            kotNumber: kot?.kotNo,
+            itemId: kotItem.id,
+            name: kotItem.name,
+            quantity: quantityDiff,
+          });
+        }
+      } else {
+        // Item completely voided
+        voidedItems.push({
+          id: kotItem.id,
+          name: kotItem.name,
+          voidedQuantity: kotItem.quantity,
+        });
+
+        dataForVoidItems.push({
+          restId: kot?.restaurent?.id,
+          invoiceNumber: kot?.kotOrderNo,
+          counterId: kot?.Counter?.id,
+          kotNumber: kot?.kotNo,
+          itemId: kotItem.id,
+          name: kotItem.name,
+          quantity: kotItem.quantity,
+        });
+      }
+    });
+
+    //this is for save voided items to the model
+    const saveVoidedItemsToDB = async () => {
+      try {
+        for (const item of dataForVoidItems) {
+          const newVoidedItem = new voidedItemsModel(item);
+          await newVoidedItem.save();
+        }
+        console.log("All voided items saved successfully!");
+      } catch (error) {
+        console.error("Error saving voided items:", error.message);
+      }
+    };
+
+    // Call the function to save the data
+    saveVoidedItemsToDB();
+
+    // Update KOT with new items from the frontend
+    kot.orderItems = orderItems;
+    kot.totalItem = orderItems.length;
+    await kot.save();
+
+    // Total calculation logic
     let totalAmount = 0;
     for (const kotId of table.currentOrder.kots) {
       const kotData = await kots.findById(kotId);
@@ -1716,7 +2069,6 @@ const forVoidAndAddKotItems = async (req, res) => {
     }
 
     const parcel = table.currentOrder.parcel || 0;
-
     table.currentOrder.subTotal = table.currentOrder.subTotal + parcel;
 
     if (table?.tableType === "dine-in") {
@@ -1770,9 +2122,105 @@ const forVoidAndAddKotItems = async (req, res) => {
     table.currentOrder.remainAmount = table.currentOrder.totalAmount;
     await table.save();
 
+    // Handling voided items - adjusting stock
+    for (const voidedItem of voidedItems) {
+      const itemInMenu = TotalMenuItems.find(
+        (menuItem) => menuItem._id.toString() === voidedItem.id.toString()
+      );
+
+      const itemInCombo = allComboItems.find(
+        (comboItem) => comboItem._id.toString() === voidedItem.id.toString()
+      );
+
+      if (itemInMenu) {
+        for (const stockItem of itemInMenu.stockItems) {
+          const stockInDb = allStockIteminStock.find(
+            (stock) => stock._id.toString() === stockItem.id.toString()
+          );
+
+          if (stockInDb) {
+            const voidQty = stockItem.qty * voidedItem.voidedQuantity;
+
+            if (stockInDb.qtyType === stockItem.qtyType) {
+              stockInDb.stock += voidQty;
+            } else if (
+              stockInDb.qtyType === "kilogram" &&
+              stockItem.qtyType === "gram"
+            ) {
+              stockInDb.stock += voidQty / 1000;
+            } else if (
+              stockInDb.qtyType === "kilogram" &&
+              stockItem.qtyType === "milligram"
+            ) {
+              stockInDb.stock += voidQty / 1000000;
+            } else if (
+              stockInDb.qtyType === "gram" &&
+              stockItem.qtyType === "milligram"
+            ) {
+              stockInDb.stock += voidQty / 1000;
+            } else if (
+              stockInDb.qtyType === "liter" &&
+              stockItem.qtyType === "milliliter"
+            ) {
+              stockInDb.stock += voidQty / 1000;
+            }
+
+            await stockInDb.save();
+          }
+        }
+      }
+
+      if (itemInCombo) {
+        for (const subMenuItem of itemInCombo.items) {
+          const menuItem = TotalMenuItems.find(
+            (menu) => menu._id.toString() === subMenuItem.id.toString()
+          );
+
+          if (menuItem) {
+            for (const stockItem of menuItem.stockItems) {
+              const stockInDb = allStockIteminStock.find(
+                (stock) => stock._id.toString() === stockItem.id.toString()
+              );
+
+              if (stockInDb) {
+                const voidQty =
+                  stockItem.qty * subMenuItem.qty * voidedItem.voidedQuantity;
+
+                if (stockInDb.qtyType === stockItem.qtyType) {
+                  stockInDb.stock += voidQty;
+                } else if (
+                  stockInDb.qtyType === "kilogram" &&
+                  stockItem.qtyType === "gram"
+                ) {
+                  stockInDb.stock += voidQty / 1000;
+                } else if (
+                  stockInDb.qtyType === "kilogram" &&
+                  stockItem.qtyType === "milligram"
+                ) {
+                  stockInDb.stock += voidQty / 1000000;
+                } else if (
+                  stockInDb.qtyType === "gram" &&
+                  stockItem.qtyType === "milligram"
+                ) {
+                  stockInDb.stock += voidQty / 1000;
+                } else if (
+                  stockInDb.qtyType === "liter" &&
+                  stockItem.qtyType === "milliliter"
+                ) {
+                  stockInDb.stock += voidQty / 1000;
+                }
+
+                await stockInDb.save();
+              }
+            }
+          }
+        }
+      }
+    }
+
     res
       .status(201)
-      .json({ message: "KOT updated in current order", kotId: kot._id });
+      .json({ message: "KOT updated and stock adjusted", kotId: kot._id });
   } catch (err) {
     console.error("Error updating KOT:", err);
     res.status(500).json({ msg: "Server Error", error: err.message });
