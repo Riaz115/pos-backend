@@ -11,6 +11,10 @@ stockRouter
   .route("/restaurent/getdata/edit/:id/stock/items")
   .get(controllers.forGettingDataForEditItem);
 
+stockRouter
+  .route("/restaurent/:id/all/void/items")
+  .get(controllers.forGettingAllVoidedItems);
+
 //all post
 stockRouter
   .route("/restuarent/:id/add/stock/item")
@@ -26,7 +30,9 @@ stockRouter
   .patch(controllers.forEditTheStockItem);
 
 //all delete routes
-stockRouter.route("/restaurent/item/:id/delete/stock").delete(controllers.forDeleteTheStockItem)
+stockRouter
+  .route("/restaurent/item/:id/delete/stock")
+  .delete(controllers.forDeleteTheStockItem);
 
 //exporting
 module.exports = stockRouter;

@@ -978,9 +978,19 @@ const forGettingAllItemsOfOrder = async (req, res) => {
 };
 
 //this is for getting all kots
+// const forGettingAllKots = async (req, res) => {
+//   try {
+//     const allKots = await kots.find();
+//     res.status(200).json({ allKots });
+//   } catch (err) {
+//     res.status(500).json({ msg: "Server Error", err });
+//   }
+// };
+
 const forGettingAllKots = async (req, res) => {
   try {
-    const allKots = await kots.find();
+    const { id } = req.params;
+    const allKots = await kots.find({ "restaurent.id": id });
     res.status(200).json({ allKots });
   } catch (err) {
     res.status(500).json({ msg: "Server Error", err });
@@ -1998,6 +2008,7 @@ const forVoidAndAddKotItems = async (req, res) => {
             itemId: kotItem.id,
             name: kotItem.name,
             quantity: quantityDiff,
+            reason: frontendItem.reason,
           });
         }
       } else {
@@ -2016,6 +2027,7 @@ const forVoidAndAddKotItems = async (req, res) => {
           itemId: kotItem.id,
           name: kotItem.name,
           quantity: kotItem.quantity,
+          reason: kotItem.reason,
         });
       }
     });
@@ -2649,7 +2661,7 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
   try {
-    const allDeletedOrders = await allMenuItems.deleteMany();
+    // const allDeletedOrders = await kots.deleteMany();
     res.send({ msg: "all order deleted successfully" });
   } catch (err) {
     console.log("there is err", err);

@@ -1,5 +1,6 @@
 const stockSchema = require("../Models/StockItemsModal");
 const Restaurant = require("../Models/RestaurentModel");
+const voidedItemsModel = require("../Models/VoidedItemsModal");
 
 //this is for get all stock items
 const forGetAllStockItems = async (req, res) => {
@@ -122,6 +123,19 @@ const forDeleteTheStockItem = async (req, res) => {
   }
 };
 
+//this is for get all voided items
+const forGettingAllVoidedItems = async (req, res) => {
+  try {
+    const { id: restId } = req.params;
+    const allVoidedItems = await voidedItemsModel.find({ restId }).sort({
+      createdAt: -1,
+    });
+    res.status(200).json(allVoidedItems);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch voided items." });
+  }
+};
+
 //this is for exporting
 module.exports = {
   forGetAllStockItems,
@@ -130,4 +144,5 @@ module.exports = {
   forEditTheStockItem,
   forGettingDataForEditItem,
   forDeleteTheStockItem,
+  forGettingAllVoidedItems,
 };

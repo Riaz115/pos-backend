@@ -33,6 +33,7 @@ const voidedItemSchema = new Schema(
     },
     reason: {
       type: "String",
+      required: true,
     },
   },
   { timestamps: true }
