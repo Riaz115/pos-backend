@@ -40,9 +40,10 @@ const forStartDayOfRestaurent = async (req, res) => {
 
 //this is for  getting day data
 const forGettingRestRunningDayData = async (req, res) => {
-  const { restid, dayid } = req.params;
-  const runningDay = await DaysCloseAndOpen.findOne({ _id: dayid });
   try {
+    const { restid, dayid } = req.params;
+    const runningDay = await DaysCloseAndOpen.findOne({ _id: dayid });
+
     res.status(200).json({ runningDay });
   } catch (err) {
     res.status(500).json({ msg: "Server Error", err });
@@ -51,10 +52,8 @@ const forGettingRestRunningDayData = async (req, res) => {
 
 //this is for close the day of the restaurent
 const forCloseTheDayOfRestaurent = async (req, res) => {
-  const { restid, dayid } = req.params;
-
   try {
-    // Fetch the running day data
+    const { restid, dayid } = req.params;
     const runningDayData = await DaysCloseAndOpen.findOne({ _id: dayid });
     if (!runningDayData) {
       return res.status(404).json({ msg: "Day data not found" });
@@ -113,7 +112,6 @@ const forCloseTheDayOfRestaurent = async (req, res) => {
       data: runningDayData,
     });
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ msg: "Server Error", error: err.message });
   }
 };
@@ -282,6 +280,7 @@ const forDeleteAccName = async (req, res) => {
 //this is for add transition to cash book
 const forAddTransitionToCashBook = async (req, res) => {
   const { id } = req.params;
+
   const {
     headAcount,
     accountName,

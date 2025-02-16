@@ -5,6 +5,7 @@ const Counter = require("../Models/CounterModel");
 const Guests = require("../Models/RestGuestsModel");
 const Orders = require("../Models/OrderSchema");
 const dayCloseAndOpenModal = require("../Models/DayStartAndCloseModel");
+const roleModel = require("../Models/RoleModel.js");
 
 //this is for images url
 const imageUrl = "http://localhost:8000/restImages/";
@@ -110,25 +111,29 @@ const forAddRestaurent = async (req, res) => {
 
 //this is for get user all restaurents
 const forGetUserAllRestaurents = async (req, res) => {
-  const { id } = req.user;
-  const restaurants = await Restaurant.find({
-    "owner.id": id,
-  });
+  try {
+    const { id } = req.user;
+    const restaurants = await Restaurant.find({
+      "owner.id": id,
+    });
 
-  if (!restaurants || restaurants.length === 0) {
-    return res
-      .status(404)
-      .json({ message: "No restaurants found for this owner." });
-  }
-
-  // Update the image URL for each restaurant
-  const updatedRestaurants = restaurants.map((restaurant) => {
-    if (restaurant.restLogo) {
-      restaurant.restLogo = imageUrl + restaurant.restLogo;
+    if (!restaurants || restaurants.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No restaurants found for this owner." });
     }
-    return restaurant;
-  });
-  res.status(200).json(updatedRestaurants);
+
+    // Update the image URL for each restaurant
+    const updatedRestaurants = restaurants.map((restaurant) => {
+      if (restaurant.restLogo) {
+        restaurant.restLogo = imageUrl + restaurant.restLogo;
+      }
+      return restaurant;
+    });
+    res.status(200).json(updatedRestaurants);
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
 };
 
 //this is for getting data of single resturent for edit
@@ -323,12 +328,17 @@ const forUpdateCounter = async (req, res) => {
 
 //this is for get all counters of the restaurent
 const forGetAllCountersOfRestaurent = async (req, res) => {
-  const id = req.params.id.trim();
-  const counters = await Counter.find({
-    "restaurent.id": id,
-  });
+  try {
+    const id = req.params.id.trim();
+    const counters = await Counter.find({
+      "restaurent.id": id,
+    });
 
-  res.status(200).json({ counters });
+    res.status(200).json({ counters });
+  } catch (err) {
+    console.log("there is error in the getting all counters function", err);
+    res.status({ msg: "Server Error", err });
+  }
 };
 
 //this is for get data for edit counter
@@ -579,6 +589,12 @@ const forPayGuestSingleCreditOrder = async (req, res) => {
       invoiceData.orderDate = Date.now();
     }
 
+    if (orderData.credit > amount) {
+      orderData.credit = orderData.credit - amount;
+    } else {
+      orderData.credit = 0;
+    }
+
     // Push the record to guestCreditPaidAmounts
     guestData.guestCreditPaidAmounts.push(creditPaidRecord);
 
@@ -729,6 +745,78 @@ const forPayGuestAllCreditOrders = async (req, res) => {
   }
 };
 
+//this is for add role to the restaurent
+const forAddRoleToRest = async (req, res) => {
+  const { name, permissions } = req.body;
+  const { id } = req.params;
+  try {
+    const createdRole = await new roleModel({
+      restaurantId: id,
+      name,
+      permissions,
+    });
+
+    const newRole = await createdRole.save();
+
+    res.status(201).json({ msg: "Role Create Succssfully", newRole });
+  } catch (err) {
+    console.log("err", err);
+    res.status(500).json({ success: false, message: "Server Error", err });
+  }
+};
+
+//this is for getting all roles
+const forGettingAllRoles = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const roles = await roleModel.find({ restaurantId: id });
+    res.status(200).json({ msg: "Roles fetched successfully", roles });
+  } catch (err) {
+    console.log("err", err);
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for getting role data
+const forGEttingRoleData = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const roleData = await roleModel.findById(id);
+    res.status(200).json(roleData);
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for update the role
+const forEditTheRole = async (req, res) => {
+  const { name, permissions } = req.body;
+  const { id } = req.params;
+  try {
+    const roleData = {
+      name,
+      permissions,
+    };
+
+    const updatedRole = await roleModel.findByIdAndUpdate(id, roleData);
+    res.status(201).json({ msg: "Role updated Succssfully", updatedRole });
+  } catch (err) {
+    console.log("err", err);
+    res.status(500).json({ success: false, message: "Server Error", err });
+  }
+};
+
+//this is for delete the user
+const forDeleteTheRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteItem = await roleModel.findByIdAndDelete(id);
+    res.status(200).json({ msg: "Role deleted successfully", deleteItem });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
 //exporting
 module.exports = {
   forAddRestaurent,
@@ -751,4 +839,9 @@ module.exports = {
   forPayGuestSingleCreditOrder,
   forGettingGuestCreditSingleOrderData,
   forPayGuestAllCreditOrders,
+  forAddRoleToRest,
+  forGettingAllRoles,
+  forGEttingRoleData,
+  forDeleteTheRole,
+  forEditTheRole,
 };

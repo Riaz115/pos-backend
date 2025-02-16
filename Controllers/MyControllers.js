@@ -3,6 +3,8 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcryptjs");
 const Restaurant = require("../Models/RestaurentModel");
+const restAllUsers = require("../Models/CounterUsers");
+const { deleteFromCloudinary } = require("../MiddleWares/upload");
 
 //this is for imageUrl
 const imageUrl = "http://localhost:8000/images";
@@ -15,52 +17,46 @@ const Home = (req, res) => {
 //this is for get all owner users
 const forGetAllOwnerUsers = async (req, res) => {
   try {
-    const allUser = await MyAllUsers.find().sort({ createdAt: -1 });
-
-    const ownerUsers = allUser.map((user) => {
-      let myImage = user.image;
-      if (myImage !== "") {
-        myImage = `${imageUrl}/${user.image}`;
-      } else {
-        myImage = "";
-      }
-
-      return {
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        image: myImage,
-      };
-    });
+    const ownerUsers = await MyAllUsers.find()
+      .sort({ createdAt: -1 })
+      .select("-password");
 
     res.status(200).json({ ownerUsers });
   } catch (err) {
-    console.log("there is error in get all owner user function");
+    console.log("there is error in get all owner user function", err);
     res.status(500).json({ msg: "server error" });
   }
 };
 
 //this is for adding user
 const AddOwnerUser = async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    phone,
-    gender,
-    myCountry,
-    state,
-    city,
-    address,
-  } = req.body;
-  const image = req.file ? req.file.filename : "";
-
   try {
-    const userExist = await MyAllUsers.findOne({ email });
-    if (userExist) {
-      res.status(401).json({ msg: "Email Already Exist" });
+    const {
+      name,
+      email,
+      password,
+      phone,
+      gender,
+      myCountry,
+      state,
+      city,
+      address,
+      role,
+    } = req.body;
+
+    //this is for image
+    const image = req?.file ? req?.file?.url : "";
+
+    const userExist = await MyAllUsers.findOne({ email: email });
+    const userNewExist = await restAllUsers.findOne({
+      email: email,
+    });
+
+    if (userExist || userNewExist) {
+      if (req?.file?.publicId) {
+        await deleteFromCloudinary(req?.file?.url);
+      }
+      return res.status(401).json({ msg: "Email Already Exist" });
     } else {
       const salt = 10;
       const hashPassword = await bcrypt.hash(password, salt);
@@ -74,6 +70,7 @@ const AddOwnerUser = async (req, res) => {
         state,
         city,
         address,
+        role,
         image: image,
       });
 
@@ -84,6 +81,9 @@ const AddOwnerUser = async (req, res) => {
       });
     }
   } catch (err) {
+    if (req?.file?.publicId) {
+      await deleteFromCloudinary(req?.file?.url);
+    }
     console.log("there is error in add user function", err);
     res.status(500).json({ msg: "server error" });
   }
@@ -92,56 +92,39 @@ const AddOwnerUser = async (req, res) => {
 //this is for the LOgin
 const forLoginUser = async (req, res) => {
   const { email, password } = req.body;
-  try {
-    const userData = await MyAllUsers.findOne({
-      email,
-    });
 
-    if (!userData) {
-      res.status(401).json({ msg: "Email Not Exist" });
-    } else {
-      const isMatch = await bcrypt.compare(password, userData.password);
-      if (!isMatch) {
-        res.status(401).json({ msg: "incorrect password" });
-      } else {
-        res.status(200).json({
-          msg: "Login Successfully",
-          token: userData.forGenToken(),
-        });
-      }
+  try {
+    const userData = await MyAllUsers.findOne({ email });
+    const userInRest = await restAllUsers.findOne({ email });
+
+    if (!userData && !userInRest) {
+      return res.status(401).json({ msg: "Email Not Exist" });
     }
+
+    const user = userData || userInRest;
+    const hashedPassword = user?.password;
+
+    const isMatch = await bcrypt.compare(password, hashedPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({ msg: "Something Went Wrong" });
+    }
+
+    res.status(200).json({
+      msg: "Login Successfully",
+      token: user.forGenToken(),
+    });
   } catch (err) {
-    console.log("there is error in the login function", err);
+    console.log("There is an error in the login function", err);
     res.status(500).json({ msg: "Server Error", err });
   }
 };
 
 //this is for get owner user data
 const getForOwnerUserData = async (req, res) => {
-  const id = req.params.id;
-
   try {
-    const myUser = await MyAllUsers.findById(id);
-    let userImage = myUser.image;
-    if (userImage !== "") {
-      userImage = `${imageUrl}/${myUser.image}`;
-    } else {
-      userImage = "";
-    }
-
-    const userData = {
-      id: myUser._id,
-      name: myUser.name,
-      email: myUser.email,
-      phone: myUser.phone,
-      gender: myUser.gender,
-      myCountry: myUser.myCountry,
-      state: myUser.state,
-      city: myUser.city,
-      address: myUser.address,
-      image: userImage,
-    };
-
+    const { id } = req.params;
+    const userData = await MyAllUsers.findById(id);
     res.status(200).json({ userData });
   } catch (err) {
     console.log("there is error in get user data function ", err);
@@ -151,70 +134,72 @@ const getForOwnerUserData = async (req, res) => {
 
 //this is for eidt owner user
 const forEditOwnerUser = async (req, res) => {
-  const { id } = req.params;
-  const userPrevData = await MyAllUsers.findById(id);
-  const PrevPassword = userPrevData.password;
-  let newPassword = PrevPassword;
-
-  const {
-    name,
-    email,
-    password,
-    phone,
-    gender,
-    myCountry,
-    state,
-    city,
-    address,
-  } = req.body;
-
-  if (password) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    newPassword = hashedPassword;
-  } else {
-    newPassword = PrevPassword;
-  }
-
-  const updatedUser = {
-    name: name,
-    email: email,
-    password: newPassword,
-    phone: phone,
-    gender: gender,
-    myCountry: myCountry,
-    state: state,
-    city: city,
-    address: address,
-  };
-
-  if (req.file) {
-    updatedUser.image = req.file.filename;
-    console.log(updatedUser.image, "check");
-    const existingItem = await MyAllUsers.findById(id);
-
-    const existImage = path.join(
-      __dirname,
-      "..",
-      "UserImages",
-      existingItem.image
-    );
-
-    fs.unlink(existImage, (err) => {
-      if (err) {
-        console.log("there is error in  delete image", err);
-      } else {
-        if (existImage !== "") {
-          console.log("image deleted successfully");
-        }
-      }
-    });
-  }
-
   try {
+    const { id } = req.params;
+    const userPrevData = await MyAllUsers.findById(id);
+    const PrevPassword = userPrevData.password;
+    let newPassword = PrevPassword;
+
+    const {
+      name,
+      email,
+      password,
+      phone,
+      gender,
+      myCountry,
+      state,
+      city,
+      address,
+      oldImageUrl,
+      role,
+    } = req.body;
+
+    //this is for image
+    const image = req?.file ? req?.file?.url : oldImageUrl;
+
+    const userExist = await MyAllUsers.findOne({
+      email: email,
+      _id: { $ne: id },
+    });
+    const userNewExist = await restAllUsers.findOne({
+      email: email,
+      _id: { $ne: id },
+    });
+
+    if (userExist || userNewExist) {
+      if (req?.file?.publicId) {
+        await deleteFromCloudinary(req?.file?.url);
+      }
+      return res.status(401).json({ msg: "Email Already Exists" });
+    }
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      newPassword = hashedPassword;
+    } else {
+      newPassword = PrevPassword;
+    }
+
+    const updatedUser = {
+      name: name,
+      email: email,
+      password: newPassword,
+      phone: phone,
+      gender: gender,
+      myCountry: myCountry,
+      state: state,
+      city: city,
+      address: address,
+      image: image,
+      role: role,
+    };
     const newUser = await MyAllUsers.findByIdAndUpdate(id, updatedUser);
 
     res.status(200).json({ msg: "user Updated Successfully", newUser });
   } catch (err) {
+    if (req?.file?.publicId) {
+      await deleteFromCloudinary(req?.file?.url);
+    }
     res.status(500).json({ msg: "Server Error" });
     console.log("there is error in update owner user function", err);
   }
@@ -222,21 +207,18 @@ const forEditOwnerUser = async (req, res) => {
 
 //this is for delete owner user
 const forDeleteOwnerUser = async (req, res) => {
-  const id = req.params.id;
   try {
+    const { id } = req.params;
     const myUser = await MyAllUsers.findById(id);
-    const imagePath = path.join(__dirname, "..", "UserImages", myUser.image);
-    fs.unlink(imagePath, (err) => {
-      if (err) {
-        console.log("image not deleted", err);
-      } else {
-        console.log("image deleted sucessfully");
+    if (!myUser) {
+      res.status(400).json({ msg: "User Not Found" });
+    } else {
+      if (myUser?.image) {
+        await deleteFromCloudinary(myUser?.image);
       }
-    });
-
-    const deleteItem = await MyAllUsers.findByIdAndDelete(id);
-
-    res.status(200).json({ msg: "deleted successfully", deleteItem });
+      const deleteItem = await MyAllUsers.findByIdAndDelete(id);
+      res.status(200).json({ msg: "deleted successfully", deleteItem });
+    }
   } catch (err) {
     console.log("there is error in the delete item function ", err);
   }
@@ -245,16 +227,17 @@ const forDeleteOwnerUser = async (req, res) => {
 //this is for get user data
 const getUserData = async (req, res) => {
   const userData = req.user;
+
   let image = userData.image;
 
   if (image) {
-    image = `${imageUrl}/${userData.image}`;
+    userData.image = `${imageUrl}/${userData?.image}`;
   } else {
-    image = "";
+    userData.image = "";
   }
 
   try {
-    res.status(201).json({ userData: userData, image: image });
+    res.status(200).json({ userData: userData, image: image });
   } catch (err) {
     console.log(
       "there is error in the get user data function in controller file",

@@ -2,7 +2,6 @@ const express = require("express");
 const trouter = express.Router();
 const controllers = require("../Controllers/TablesController");
 const userAuth = require("../MiddleWares/UserAuth");
-const logMiddleware = require("../MiddleWares/LogData");
 
 //All Routes
 
@@ -10,13 +9,13 @@ const logMiddleware = require("../MiddleWares/LogData");
 
 trouter.route("/get/alltables").get(controllers.forGettingAllRestAllTables);
 
-trouter.route("/getall/:id/tables").get(controllers.forGetAllTables);
+trouter.route("/getall/:id/tables").get(userAuth, controllers.forGetAllTables);
 trouter
   .route("/forget/all/tables/:restid")
   .get(controllers.forGetAllRestaurentTables);
 trouter.route("/getdata/:id/table").get(controllers.forGetDataForEditTable);
 trouter.route("/getall/orders").get(controllers.forGettingAllOrders);
-trouter.route("/getall/kots").get(controllers.forGettingAllKots);
+trouter.route("/getall/restaurent/:id/kots").get(controllers.forGettingAllKots);
 trouter
   .route("/getall/:id/itemsofcurrorder")
   .get(controllers.forGettingAllItemsOfOrder);
@@ -32,6 +31,14 @@ trouter
 trouter
   .route("/get/:id/restaurent/all/delivered/kots")
   .get(controllers.forGettingAllDeliveredKots);
+
+trouter
+  .route("/get/running/day/:id/all/orders")
+  .get(controllers.forGettingRunningDayOrder);
+
+trouter
+  .route("/get/running/day/:id/all/kots")
+  .get(controllers.forGettingAllKotsOfRunningDay);
 
 //All Post ROutes
 trouter.route("/add/:id/table").post(controllers.forAddTables);

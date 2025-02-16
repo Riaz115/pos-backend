@@ -1,47 +1,19 @@
 //importing
-const path = require("path");
-const fs = require("fs");
 const CounterUsers = require("../Models/CounterUsers");
 const Counter = require("../Models/CounterModel");
 const counterAreas = require("../Models/CounterArea");
-
-//this is for image url
-const imageUrl = "http://localhost:8000/user-images/";
+const allRestaurents = require("../Models/RestaurentModel");
+const MyAllUsers = require("../Models/UserModel");
+const allRoles = require("../Models/RoleModel");
+const bcrypt = require("bcryptjs");
+const { deleteFromCloudinary } = require("../MiddleWares/upload");
 
 //this is for add user into the counter
 const forAddUserInCounter = async (req, res) => {
-  const id = req.params.counterid.trim();
-
-  //this is for finding counter data
-  const myCounter = await Counter.findById(id);
-
-  //this is for checkin
-
-  //this is for destructuring
-  const {
-    counterUserName,
-    counterUserEmail,
-    counterUserPassword,
-    counterUserRole,
-    counterUserPhone,
-    counterUserCountry,
-    counterUserState,
-    counterUserCity,
-    counterUseraddress,
-    counterUserGender,
-  } = req.body;
-
-  //this is for counter data
-  let counterData = {
-    id: myCounter._id,
-  };
-
-  //this is for image
-  const userImage = req.file ? req.file.filename : "";
-
   try {
-    const newCounterUser = new CounterUsers({
-      counter: counterData,
+    const { id } = req.params;
+    const myRestData = await allRestaurents.findById(id);
+    const {
       counterUserName,
       counterUserEmail,
       counterUserPassword,
@@ -52,23 +24,66 @@ const forAddUserInCounter = async (req, res) => {
       counterUserCity,
       counterUseraddress,
       counterUserGender,
-      counterUserImage: userImage,
-    });
-    const savedCounterUser = await newCounterUser.save();
+    } = req.body;
 
-    myCounter.users.push({
-      id: savedCounterUser._id,
-      name: savedCounterUser.counterUserName,
-      email: savedCounterUser.counterUserEmail,
-    });
-    await myCounter.save();
+    //this is for counter data
+    let restData = {
+      id: myRestData?._id,
+    };
 
-    res.status(201).json({
-      msg: "Counter User added successfully",
-      savedCounterUser,
+    //this is for image
+    const userImage = req?.file ? req?.file?.url : "";
+
+    const userExist = await MyAllUsers.findOne({ email: counterUserEmail });
+    const userNewExist = await CounterUsers.findOne({
+      email: counterUserEmail,
     });
+
+    if (userExist || userNewExist) {
+      if (req?.file?.publicId) {
+        await deleteFromCloudinary(req?.file?.url);
+      }
+      return res.status(401).json({ msg: "Email Already Exist" });
+    } else {
+      const salt = 10;
+      const hashPassword = await bcrypt.hash(counterUserPassword, salt);
+
+      const userRole = await allRoles.findById(counterUserRole);
+
+      if (!userRole) {
+        if (req?.file?.publicId) {
+          await deleteFromCloudinary(req?.file?.url);
+        }
+        return res.status(404).json({ msg: "Role not found" });
+      }
+
+      const newCounterUser = new CounterUsers({
+        restaurent: restData,
+        name: counterUserName,
+        email: counterUserEmail,
+        password: hashPassword,
+        role: counterUserRole,
+        phone: counterUserPhone,
+        myCountry: counterUserCountry,
+        state: counterUserState,
+        city: counterUserCity,
+        address: counterUseraddress,
+        gender: counterUserGender,
+        image: userImage,
+        permissions: userRole?.permissions || [],
+      });
+      const savedCounterUser = await newCounterUser.save();
+
+      res.status(201).json({
+        msg: "Counter User added successfully",
+        savedCounterUser,
+      });
+    }
   } catch (err) {
-    console.log("there is error in the add counter user function", err);
+    if (req?.file?.publicId) {
+      await deleteFromCloudinary(req?.file?.url);
+    }
+    console.log("error", err);
     res.status(500).json({ msg: "Server error", error: err });
   }
 };
@@ -78,15 +93,12 @@ const forGetCounterAllUser = async (req, res) => {
   const id = req.params.counterid;
 
   try {
-    const allUsers = await CounterUsers.find({ "counter.id": id }).sort({
+    const updatedCounterUser = await CounterUsers.find({
+      "restaurent.id": id,
+    }).sort({
       createdAt: -1,
     });
-    const updatedCounterUser = allUsers.map((user) => {
-      if (user.counterUserImage) {
-        user.counterUserImage = imageUrl + user.counterUserImage;
-      }
-      return user;
-    });
+
     res.status(200).json(updatedCounterUser);
   } catch (err) {
     console.log("there is error in the get all users of counter function", err);
@@ -96,20 +108,11 @@ const forGetCounterAllUser = async (req, res) => {
 
 //this is for get single user data for update
 const getUserDataforEdit = async (req, res) => {
-  const id = req.params.userid;
-
   try {
+    const { id } = req.params;
     const counterUser = await CounterUsers.findById(id).select({
       counterUserPassword: 0,
     });
-    let userImage = counterUser.counterUserImage;
-    if (userImage) {
-      userImage = imageUrl + userImage;
-    } else {
-      userImage = "";
-    }
-
-    counterUser.counterUserImage = userImage;
 
     res.status(200).json({ counterUser });
   } catch (err) {
@@ -120,68 +123,104 @@ const getUserDataforEdit = async (req, res) => {
 
 //this is for edit counte user
 const forEditCounterUser = async (req, res) => {
-  const id = req.params.forupdateid;
-  let counterUser = await CounterUsers.findById(id);
-  let PrevPassword = counterUser.counterUserPassword;
-
-  let {
-    counterUserName,
-    counterUserEmail,
-    counterUserPassword,
-    counterUserRole,
-    counterUserPhone,
-    counterUserCountry,
-    counterUserState,
-    counterUserCity,
-    counterUseraddress,
-    counterUserGender,
-  } = req.body;
-
-  if (counterUserPassword) {
-    PrevPassword = counterUserPassword;
-  } else {
-    counterUserPassword = PrevPassword;
-  }
-
-  let updatedUser = {
-    counterUserName,
-    counterUserEmail,
-    counterUserPassword: PrevPassword,
-    counterUserRole,
-    counterUserPhone,
-    counterUserCountry,
-    counterUserState,
-    counterUserCity,
-    counterUseraddress,
-    counterUserGender,
-  };
-
-  if (req.file) {
-    updatedUser.counterUserImage = req.file.filename;
-    let existingItem = await CounterUsers.findById(id);
-
-    let existImage = path.join(
-      __dirname,
-      "..",
-      "CounterUserImages",
-      existingItem.counterUserImage
-    );
-
-    fs.unlink(existImage, (err) => {
-      if (existImage !== "") {
-        console.log("image deleted Successfully");
-      } else {
-        console.log("image not found ", err);
-      }
-    });
-  }
-
   try {
+    const id = req.params.forupdateid;
+    let counterUser = await CounterUsers.findById(id);
+    let PrevPassword = counterUser.counterUserPassword;
+
+    let {
+      counterUserName,
+      counterUserEmail,
+      counterUserPassword,
+      counterUserRole,
+      counterUserPhone,
+      counterUserCountry,
+      counterUserState,
+      counterUserCity,
+      counterUseraddress,
+      counterUserGender,
+      oldImageUrl,
+    } = req.body;
+
+    if (counterUserPassword) {
+      PrevPassword = counterUserPassword;
+    } else {
+      counterUserPassword = PrevPassword;
+    }
+
+    const userRole = await allRoles.findById(counterUserRole);
+
+    if (!userRole) {
+      if (req?.file?.publicId) {
+        await deleteFromCloudinary(req?.file?.url);
+      }
+      return res.status(404).json({ msg: "Role not found" });
+    }
+
+    //this is for image
+    const image = req?.file ? req?.file?.url : oldImageUrl;
+
+    const userExist = await MyAllUsers.findOne({
+      email: counterUserEmail,
+      _id: { $ne: id },
+    });
+    const userNewExist = await CounterUsers.findOne({
+      email: counterUserEmail,
+      _id: { $ne: id },
+    });
+
+    if (userExist || userNewExist) {
+      if (req?.file?.publicId) {
+        await deleteFromCloudinary(req?.file?.url);
+      }
+      return res.status(401).json({ msg: "Email Already Exists" });
+    }
+
+    let updatedUser = {
+      name: counterUserName,
+      email: counterUserEmail,
+      password: PrevPassword,
+      role: counterUserRole,
+      phone: counterUserPhone,
+      myCountry: counterUserCountry,
+      state: counterUserState,
+      city: counterUserCity,
+      address: counterUseraddress,
+      gender: counterUserGender,
+      image: image,
+      permissions: userRole?.permissions || [],
+    };
+
     const newUser = await CounterUsers.findByIdAndUpdate(id, updatedUser);
     res.status(200).json({ msg: "user Updated Successfully", newUser });
   } catch (err) {
+    if (req?.file?.publicId) {
+      await deleteFromCloudinary(req?.file?.url);
+    }
     console.log("there is error in edit counter user function", err);
     res.status(500).json({ msg: "server error", err });
+  }
+};
+
+//this is for delete the restaurent user
+const forDeleteTheRestaurentUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const myUser = await CounterUsers.findById(id);
+    if (!myUser) {
+      return res.status(400).json({ msg: "User Not Found" });
+    } else {
+      if (myUser?.image) {
+        await deleteFromCloudinary(myUser?.image);
+      }
+
+      const deleteItem = await CounterUsers.findByIdAndDelete(id);
+
+      res.status(200).json({ msg: "User deleted successfully", deleteItem });
+    }
+  } catch (err) {
+    console.log("err delete error", err);
+    res.status(500).json({ msg: "Server error", err });
   }
 };
 
@@ -299,6 +338,7 @@ const forGettingDataOfCounter = async (req, res) => {
     res.status(500).json({ msg: "Server Error", err });
   }
 };
+
 module.exports = {
   forAddUserInCounter,
   forGetCounterAllUser,
@@ -311,4 +351,5 @@ module.exports = {
   forDelteAreaOfTheCounter,
   forGettingAllCounterAreas,
   forGettingDataOfCounter,
+  forDeleteTheRestaurentUser,
 };

@@ -1,61 +1,67 @@
+require("dotenv").config();
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+
 const CounterUserSchema = mongoose.Schema(
   {
-    counter: {
+    restaurent: {
       id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Counter",
+        ref: "Restaurant",
         required: true,
       },
     },
-    counterUserName: {
+    name: {
       type: String,
       required: true,
     },
-    counterUserEmail: {
+    email: {
       type: String,
-      unique: true,
       required: true,
     },
-    counterUserPassword: {
+    password: {
       type: String,
       required: true,
     },
 
-    counterUserImage: {
+    image: {
       type: String,
     },
-    counterUserPhone: {
-      type: String,
-      required: true,
-    },
-    counterUserCountry: {
+    phone: {
       type: String,
       required: true,
     },
-    counterUserState: {
+    myCountry: {
       type: String,
       required: true,
     },
-    counterUserCity: {
+    state: {
       type: String,
       required: true,
     },
-    counterUseraddress: {
+    city: {
       type: String,
       required: true,
     },
-    counterUserGender: {
+    address: {
       type: String,
       required: true,
     },
-    counterUserRole: {
+    gender: {
       type: String,
       required: true,
     },
     date: {
       type: Date,
       default: Date.now(),
+    },
+    role: {
+      type: String,
+      required: true,
+    },
+    permissions: {
+      type: [String],
+      required:true
     },
     orders: [
       {
@@ -65,6 +71,17 @@ const CounterUserSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
+
+//this is for generate token
+CounterUserSchema.methods.forGenToken = function () {
+  return jwt.sign(
+    {
+      email: this.email,
+      userId: this._id,
+    },
+    process.env.JWT_SECRETE_KEY
+  );
+};
 
 //this is for modeling
 const CounterUser = mongoose.model("CounterUser", CounterUserSchema);

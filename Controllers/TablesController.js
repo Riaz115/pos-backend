@@ -934,6 +934,22 @@ const forGetRestaurentAllOrders = async (req, res) => {
   }
 };
 
+//this is for getting all orders of runningday
+const forGettingRunningDayOrder = async (req, res) => {
+  const { id } = req.params;
+  const allOrders = await orders.find();
+
+  try {
+    const myFilterOrders = allOrders.filter(
+      (order) => order.dayId.toString() === id.toString()
+    );
+
+    res.status(200).json({ msg: "success data", myFilterOrders });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
 //this is for getting all items of current order
 const forGettingAllItemsOfOrder = async (req, res) => {
   const { id } = req.params;
@@ -977,20 +993,25 @@ const forGettingAllItemsOfOrder = async (req, res) => {
   }
 };
 
-//this is for getting all kots
-// const forGettingAllKots = async (req, res) => {
-//   try {
-//     const allKots = await kots.find();
-//     res.status(200).json({ allKots });
-//   } catch (err) {
-//     res.status(500).json({ msg: "Server Error", err });
-//   }
-// };
-
+//this is for getting restaurent all kots
 const forGettingAllKots = async (req, res) => {
   try {
     const { id } = req.params;
-    const allKots = await kots.find({ "restaurent.id": id });
+    const allKots = await kots
+      .find({ "restaurent.id": id })
+      .sort({ createdAt: -1 });
+    res.status(200).json({ allKots });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error", err });
+  }
+};
+
+//this is for getting all kots of the runnning day
+const forGettingAllKotsOfRunningDay = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allKots = await kots.find({ dayId: id });
+
     res.status(200).json({ allKots });
   } catch (err) {
     res.status(500).json({ msg: "Server Error", err });
@@ -1266,6 +1287,7 @@ const forRemoveAndAddServiceCharges = async (req, res) => {
             (table.currentOrder.subTotal * restData.serviceChargesAmount) / 100;
           table.currentOrder.totalAmount =
             table.currentOrder.totalAmount + serviceCharge;
+          table.currentOrder.serviceCharges = serviceCharge;
         } else if (restData.typeOfServiceCharges === "number") {
           serviceCharge = restData.serviceChargesAmount;
           table.currentOrder.serviceCharges = serviceCharge;
@@ -1274,8 +1296,6 @@ const forRemoveAndAddServiceCharges = async (req, res) => {
         }
       }
 
-      table.currentOrder.totalAmount =
-        table.currentOrder.totalAmount + table.currentOrder.serviceCharges;
       table.currentOrder.remainAmount = table.currentOrder.totalAmount;
       await table.save();
 
@@ -2661,7 +2681,8 @@ const forSetKotIsDeliveredTrue = async (req, res) => {
 //this is for delete all order
 const forDeleteAllOrders = async (req, res) => {
   try {
-    // const allDeletedOrders = await kots.deleteMany();
+    const allDeletedOrders = await orders.deleteMany();
+    console.log("delete ok");
     res.send({ msg: "all order deleted successfully" });
   } catch (err) {
     console.log("there is err", err);
@@ -2703,4 +2724,6 @@ module.exports = {
   forUpdateTheStatusOfTheItems,
   forSetKotIsDeliveredTrue,
   forGettingAllDeliveredKots,
+  forGettingRunningDayOrder,
+  forGettingAllKotsOfRunningDay,
 };

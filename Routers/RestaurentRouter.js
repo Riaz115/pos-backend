@@ -8,6 +8,7 @@ const userAuth = require("../MiddleWares/UserAuth");
 const controllers = require("../Controllers/RestaurentControllers");
 const newController = require("../Controllers/ItemsAndCatagoriesControllers");
 const logMiddleware = require("../MiddleWares/LogData");
+const checkPermission = require("../MiddleWares/CheckPermisisonsMiddleware");
 
 //for restaurent logo
 const storage = multer.diskStorage({
@@ -54,8 +55,9 @@ const comboItemUpload = multer({ storage: comboItemIamge });
 //routing
 
 //all get routes
-RestRouter.route("/getUserAllRestaurents").get(
+RestRouter.route("/getUserAllRestaurents/:id").get(
   userAuth,
+
   controllers.forGetUserAllRestaurents
 );
 
@@ -106,12 +108,22 @@ RestRouter.route("/getforedit/:id/guest").get(
 RestRouter.route("/getforallorders/:id/credit").get(
   controllers.forGettingGuestAllCreditOrders
 );
+
 RestRouter.route("/getsingle/:orderid/creditorder/data/:guestid").get(
   userAuth,
   controllers.forGettingGuestCreditSingleOrderData
 );
 
+RestRouter.route("/restaurent/:id/get/all/roles").get(
+  controllers.forGettingAllRoles
+);
+
+RestRouter.route("/restaurent/:restid/get/role/:id/data").get(
+  controllers.forGEttingRoleData
+);
+
 //all post routes
+
 RestRouter.route("/addRestaurent").post(
   userAuth,
   upload.single("restLogo"),
@@ -145,6 +157,10 @@ RestRouter.route("/forpay/multiorder/credit/:guestid/guest/:dayid/day").post(
   userAuth,
   controllers.forPayGuestAllCreditOrders
 );
+RestRouter.route("/restauret/:id/add/new/role").post(
+  userAuth,
+  controllers.forAddRoleToRest
+);
 
 //all update routes
 RestRouter.route("/editRestaurent/:id").patch(
@@ -169,6 +185,9 @@ RestRouter.route("/editcomboitem/:id").patch(
   newController.forEditComboItem
 );
 RestRouter.route("/editguest/:id").patch(controllers.forEditGuest);
+RestRouter.route("/restaurent/:restid/edit/:id/role").patch(
+  controllers.forEditTheRole
+);
 
 //all delete routes
 RestRouter.route("/delete/:id/catagory").delete(
@@ -187,6 +206,9 @@ RestRouter.route("/delete/:id/guest").delete(controllers.forDeleteGuest);
 RestRouter.route("/delete/:id/counter").delete(controllers.forDeleteCounter);
 RestRouter.route("/delete/:id/restaurent").delete(
   controllers.forDeleteRestaurent
+);
+RestRouter.route("/restaurent/delete/:id/role").delete(
+  controllers.forDeleteTheRole
 );
 
 //Exporting

@@ -10,7 +10,6 @@ const UserSchema = mongoose.Schema(
     },
     email: {
       type: String,
-      unique: true,
       required: true,
     },
     password: {
@@ -45,10 +44,15 @@ const UserSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    role: {
+      type: String,
+      required: true,
+    },
     date: {
       type: Date,
       default: Date.now(),
     },
+
     restaurants: [
       {
         id: { type: mongoose.Schema.Types.ObjectId, ref: "Restaurant" },

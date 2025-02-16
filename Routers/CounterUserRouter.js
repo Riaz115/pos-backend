@@ -5,30 +5,15 @@ const multer = require("multer");
 const crypto = require("crypto");
 const path = require("path");
 const controllers = require("../Controllers/CounterUserController");
-
-//for image
-const storage = multer.diskStorage({
-  destination: function (req, file, callback) {
-    callback(null, "CounterUserImages/");
-  },
-  filename: function (req, file, callback) {
-    crypto.randomBytes(12, function (err, bytes) {
-      let fn = bytes.toString("hex") + path.extname(file.originalname);
-      callback(null, fn);
-    });
-  },
-});
-
-const upload = multer({ storage: storage });
-
-//routing
+const userAuth = require("../MiddleWares/UserAuth");
+const { upload, uploadToCloudinary } = require("../MiddleWares/upload");
 
 //all get routes
 CounterUserRouter.route("/getcounterallusers/:counterid").get(
   controllers.forGetCounterAllUser
 );
 
-CounterUserRouter.route("/getuserforedit/:userid").get(
+CounterUserRouter.route("/getuserforedit/:id").get(
   controllers.getUserDataforEdit
 );
 
@@ -46,8 +31,9 @@ CounterUserRouter.route("/get/data/:id/counter").get(
   controllers.forGettingDataOfCounter
 );
 //all post routes
-CounterUserRouter.route("/addcounteruser/:counterid").post(
-  upload.single("counterUserImage"),
+CounterUserRouter.route("/addcounteruser/:id").post(
+  upload("counterUserImage"),
+  uploadToCloudinary,
   controllers.forAddUserInCounter
 );
 
@@ -57,7 +43,8 @@ CounterUserRouter.route("/counter/:id/counterareas").post(
 
 //all update routes
 CounterUserRouter.route("/foreditcounteruser/:forupdateid").patch(
-  upload.single("counterUserImage"),
+  upload("counterUserImage"),
+  uploadToCloudinary,
   controllers.forEditCounterUser
 );
 
@@ -68,6 +55,11 @@ CounterUserRouter.route("/foreditcounterarea/:id").patch(
 
 CounterUserRouter.route("/delete/:id/counterarea").delete(
   controllers.forDelteAreaOfTheCounter
+);
+
+CounterUserRouter.route("/delete/:id/restaurent/user").delete(
+  userAuth,
+  controllers.forDeleteTheRestaurentUser
 );
 
 //Exporting

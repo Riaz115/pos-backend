@@ -7,6 +7,7 @@ const expenseSchema = new mongoose.Schema({
       ref: "Restaurent",
     },
   },
+  counterid: { type: String },
   dayId: { type: mongoose.Schema.Types.ObjectId, ref: "DayOfRestaurent" },
   amount: { type: Number, required: true },
   exprensType: { type: String, enum: ["paid", "received"], required: true },
